@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Thread, PresenceStatus, PanelType, DirectoryEntry } from './types';
 import { mockThreads as initialThreads } from './data/mockThreads';
 import { useWrapUpTimer } from './hooks/useWrapUpTimer';
@@ -27,18 +27,12 @@ export default function App() {
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [muted, setMuted] = useState(false);
   const [composerText, setComposerText] = useState('');
-  const [chatLimitToast, setChatLimitToast] = useState(false);
 
   const [wrapUpActive, setWrapUpActive] = useState(false);
   const [showWrapUpOverlay, setShowWrapUpOverlay] = useState(false);
   const [directoryIntent, setDirectoryIntent] = useState<'outbound' | 'internal-chat'>('outbound');
   const [railExpanded, setRailExpanded] = useState(false);
   const [assistTab, setAssistTab] = useState<'suggested' | 'library'>('suggested');
-
-  const showChatLimit = () => {
-    setChatLimitToast(true);
-    setTimeout(() => setChatLimitToast(false), 3000);
-  };
 
   const handleWrapUpEnd = () => {
     setWrapUpActive(false);
@@ -64,6 +58,35 @@ export default function App() {
   ) ?? null;
 
   const anyActiveCall = customerCall ?? consultCall ?? null;
+
+  // Keyboard shortcuts: Escape → close panel, Ctrl+M → mute, Ctrl+H → hold
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && activePanel) {
+        setActivePanel(null);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
+        if (!customerCall && !consultCall) return;
+        e.preventDefault();
+        setMuted((m) => !m);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+        if (!customerCall) return;
+        e.preventDefault();
+        setThreads((prev) =>
+          prev.map((t) =>
+            t.id === customerCall.id
+              ? { ...t, status: t.status === 'on-hold' ? 'active' : 'on-hold' }
+              : t
+          )
+        );
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [activePanel, customerCall, consultCall]);
 
   // Chats only in the list — calls handled by CallSection
   const displayedThreads = threads.filter(
@@ -363,7 +386,6 @@ export default function App() {
       return;
     }
     if (activeChatCount >= MAX_CHATS) {
-      showChatLimit();
       setActivePanel(null);
       return;
     }
@@ -388,6 +410,7 @@ export default function App() {
   };
 
   const directoryMode = anyActiveCall ? 'active-call' : directoryIntent;
+  const atChatCapacity = activeChatCount >= MAX_CHATS;
 
   return (
     <div className="flex h-screen bg-gray-200 items-stretch">
@@ -395,26 +418,37 @@ export default function App() {
         style={{ width: railExpanded ? 640 : 380 }}
         className="flex-shrink-0 border-r border-gray-300 bg-white relative flex flex-col overflow-hidden shadow-xl transition-all duration-300 ease-in-out"
       >
-        {/* Expand / collapse toggle — top-right corner */}
-        <button
-          onClick={() => setRailExpanded((e) => !e)}
-          title={railExpanded ? 'Collapse panel' : 'Expand panel'}
-          className="absolute top-3 right-3 z-50 w-7 h-7 rounded-md flex items-center justify-center text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-        >
-          {/* Panel toggle icon — rectangle with sidebar divider */}
-          <svg className="w-4 h-4" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="1.5" y="1.5" width="15" height="15" rx="2" />
-            {railExpanded
-              ? <line x1="11.5" y1="1.5" x2="11.5" y2="16.5" />
-              : <line x1="6.5" y1="1.5" x2="6.5" y2="16.5" />
-            }
-          </svg>
-        </button>
         <PresenceControl
           presence={presence}
           onChange={handlePresenceChange}
           wrapUpSecondsLeft={wrapUpActive ? wrapUpSecondsLeft : undefined}
+          expanded={railExpanded}
+          onToggleExpand={() => setRailExpanded((e) => !e)}
         />
+
+        {/* Wrap-up progress strip — visible after the overlay is dismissed */}
+        {wrapUpActive && !showWrapUpOverlay && (
+          <div className="flex items-center gap-3 px-4 py-2 bg-yellow-50 border-b border-yellow-200 flex-shrink-0">
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-semibold text-yellow-800">Wrap-Up · not accepting new contacts</span>
+                <span className="text-[11px] font-bold tabular-nums text-yellow-800">{wrapUpSecondsLeft}s</span>
+              </div>
+              <div className="w-full h-1 bg-yellow-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-yellow-500 rounded-full transition-all duration-1000"
+                  style={{ width: `${(wrapUpSecondsLeft / 30) * 100}%` }}
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleWrapUpEnd}
+              className="text-[10px] font-semibold text-yellow-700 hover:text-yellow-900 flex-shrink-0 transition-colors"
+            >
+              Skip
+            </button>
+          </div>
+        )}
 
         {/* Main view */}
         {view === 'list' ? (
@@ -439,6 +473,8 @@ export default function App() {
               onSelect={handleSelectThread}
               onNewCall={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
               onNewInternalChat={() => { setDirectoryIntent('internal-chat'); setActivePanel('directory'); }}
+              wrapUpActive={wrapUpActive}
+              atChatCapacity={atChatCapacity}
             />
           </>
         ) : selectedThread ? (
@@ -490,16 +526,6 @@ export default function App() {
             onSkip={handleWrapUpEnd}
             onDismiss={() => setShowWrapUpOverlay(false)}
           />
-        )}
-
-        {/* Max chat limit toast */}
-        {chatLimitToast && (
-          <div className="absolute bottom-20 left-4 right-4 z-50 bg-gray-900 text-white text-xs font-medium rounded-xl px-4 py-3 shadow-lg flex items-center gap-2">
-            <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            </svg>
-            <span>Maximum {MAX_CHATS} concurrent customer chats reached. Close one before starting a new one.</span>
-          </div>
         )}
 
         {/* Overlay panels */}

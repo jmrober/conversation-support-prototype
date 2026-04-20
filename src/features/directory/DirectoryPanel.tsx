@@ -32,6 +32,7 @@ const CHAT_QUEUES = [
 
 const DEPARTMENTS = ['All', ...Array.from(new Set(mockDirectory.map((e) => e.department))).sort()];
 const FAVORITES_KEY = '__favorites__';
+const RECENT_KEY = '__recent__';
 
 export default function DirectoryPanel({
   mode,
@@ -49,18 +50,42 @@ export default function DirectoryPanel({
   const [dialInput, setDialInput] = useState('');
   const [callTab, setCallTab] = useState<'directory' | 'dial'>('directory');
   const [dept, setDept] = useState('All');
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  // Favorites — persisted to localStorage
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('workbench-favorites');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  // Recent contacts — session-only (last 5)
+  const [recentIds, setRecentIds] = useState<string[]>(() => {
+    try {
+      const stored = sessionStorage.getItem('workbench-recent');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
 
   // Cold transfer confirmation
   const [coldTarget, setColdTarget] = useState<DirectoryEntry | null>(null);
-  // Warm transfer preview
-  const [warmPending, setWarmPending] = useState<DirectoryEntry | null>(null);
+  // Warm transfer: inline confirm (no full-screen preview)
+  const [warmConfirmId, setWarmConfirmId] = useState<string | null>(null);
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      localStorage.setItem('workbench-favorites', JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const addRecent = (id: string) => {
+    setRecentIds((prev) => {
+      const next = [id, ...prev.filter((i) => i !== id)].slice(0, 5);
+      sessionStorage.setItem('workbench-recent', JSON.stringify(next));
       return next;
     });
   };
@@ -69,24 +94,28 @@ export default function DirectoryPanel({
     let list = mockDirectory;
     if (dept === FAVORITES_KEY) {
       list = list.filter((e) => favorites.has(e.id));
+    } else if (dept === RECENT_KEY) {
+      const recentSet = new Set(recentIds);
+      list = list.filter((e) => recentSet.has(e.id));
+      list = [...list].sort((a, b) => recentIds.indexOf(a.id) - recentIds.indexOf(b.id));
     } else if (dept !== 'All') {
       list = list.filter((e) => e.department === dept);
     }
     if (query.trim()) {
       const q = query.toLowerCase();
-      list = list.filter((e) => `${e.name} ${e.role} ${e.department}`.toLowerCase().includes(q));
+      list = list.filter((e) =>
+        `${e.name} ${e.role} ${e.department} ${e.extension}`.toLowerCase().includes(q)
+      );
     }
     return list;
   })();
 
-  const handleWarm = (entry: DirectoryEntry) => setWarmPending(entry);
-
-  const confirmWarm = () => {
-    if (warmPending) { onConsult(warmPending); setWarmPending(null); }
-  };
-
   const confirmCold = () => {
-    if (coldTarget) { onTransfer(coldTarget); setColdTarget(null); }
+    if (coldTarget) {
+      addRecent(coldTarget.id);
+      onTransfer(coldTarget);
+      setColdTarget(null);
+    }
   };
 
   return (
@@ -95,7 +124,7 @@ export default function DirectoryPanel({
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-4 border-b border-gray-200 flex-shrink-0">
         <button
-          onClick={coldTarget || warmPending ? () => { setColdTarget(null); setWarmPending(null); } : onClose}
+          onClick={coldTarget ? () => setColdTarget(null) : onClose}
           className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -142,48 +171,8 @@ export default function DirectoryPanel({
         </div>
       )}
 
-      {/* ── WARM TRANSFER PREVIEW ── */}
-      {warmPending && !coldTarget && (
-        <div className="flex-1 flex flex-col px-5 pt-6 pb-8">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-5">Warm Transfer</p>
-          <div className="flex flex-col gap-4 mb-6">
-            {[
-              { n: '1', title: `${activeCustomerCall?.participantName ?? 'Customer'} is placed on hold`, sub: 'They hear hold music while you consult.' },
-              { n: '2', title: `You call ${warmPending.name}`, sub: 'Brief them on the situation before handing over.' },
-              { n: '3', title: 'Complete the handoff', sub: `Transfer ${activeCustomerCall?.participantName ?? 'the customer'} to ${warmPending.name}, then drop off.` },
-            ].map(({ n, title, sub }) => (
-              <div key={n} className="flex items-start gap-3.5">
-                <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-[11px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{n}</span>
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{title}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="rounded-xl border border-gray-200 overflow-hidden mb-6">
-            <div className="px-3.5 py-2.5 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                <span className="text-[11px] font-medium text-gray-500">{activeCustomerCall?.participantName ?? 'Customer'} — On Hold</span>
-              </div>
-            </div>
-            <div className="px-3.5 py-2.5">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-800 animate-pulse" />
-                <span className="text-[11px] font-medium text-gray-700">{warmPending.name} — Consulting</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2 mt-auto">
-            <button onClick={() => setWarmPending(null)} className="flex-1 h-11 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
-            <button onClick={confirmWarm} className="flex-1 h-11 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors">Start Consult</button>
-          </div>
-        </div>
-      )}
-
       {/* ── MAIN CONTENT ── */}
-      {!coldTarget && !warmPending && (
+      {!coldTarget && (
         <>
           {/* Active-call: Directory / Dial tab strip */}
           {mode === 'active-call' && (
@@ -463,32 +452,54 @@ export default function DirectoryPanel({
                           )}
 
                           {mode === 'active-call' && (
-                            <>
-                              <button
-                                onClick={() => entry.available && setColdTarget(entry)}
-                                disabled={!entry.available}
-                                className={cn(
-                                  'text-[11px] font-semibold px-3 h-9 rounded-md border transition-colors',
-                                  entry.available
-                                    ? 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                                    : 'border-gray-200 text-gray-300 cursor-not-allowed'
-                                )}
-                              >
-                                Cold
-                              </button>
-                              <button
-                                onClick={() => entry.available && handleWarm(entry)}
-                                disabled={!entry.available}
-                                className={cn(
-                                  'text-[11px] font-semibold px-3 h-9 rounded-md transition-colors',
-                                  entry.available
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                    : 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                                )}
-                              >
-                                Warm
-                              </button>
-                            </>
+                            warmConfirmId === entry.id ? (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => setWarmConfirmId(null)}
+                                  className="text-[11px] font-medium px-2.5 h-9 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    addRecent(entry.id);
+                                    onConsult(entry);
+                                    setWarmConfirmId(null);
+                                    onClose();
+                                  }}
+                                  className="text-[11px] font-semibold px-2.5 h-9 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                                >
+                                  Start Consult
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => entry.available && setColdTarget(entry)}
+                                  disabled={!entry.available}
+                                  className={cn(
+                                    'text-[11px] font-semibold px-3 h-9 rounded-md border transition-colors',
+                                    entry.available
+                                      ? 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                      : 'border-gray-200 text-gray-300 cursor-not-allowed'
+                                  )}
+                                >
+                                  Cold
+                                </button>
+                                <button
+                                  onClick={() => entry.available && setWarmConfirmId(entry.id)}
+                                  disabled={!entry.available}
+                                  className={cn(
+                                    'text-[11px] font-semibold px-3 h-9 rounded-md transition-colors',
+                                    entry.available
+                                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                      : 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                  )}
+                                >
+                                  Warm
+                                </button>
+                              </>
+                            )
                           )}
                         </div>
                       </div>
