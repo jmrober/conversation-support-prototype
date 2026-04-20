@@ -38,15 +38,6 @@ const LABEL_COLOR: Record<PresenceStatus, string> = {
   offline: 'text-gray-400',
 };
 
-const UNAVAILABLE: Partial<Record<PresenceStatus, boolean>> = {
-  busy: true,
-  'wrap-up': true,
-  break: true,
-  lunch: true,
-  away: true,
-  offline: true,
-};
-
 export default function PresenceControl({ presence, onChange, wrapUpSecondsLeft }: Props) {
   const [open, setOpen] = useState(false);
   const isWrapUp = presence === 'wrap-up' && wrapUpSecondsLeft !== undefined;
