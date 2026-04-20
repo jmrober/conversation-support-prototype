@@ -140,7 +140,10 @@ export default function ThreadItem({ thread, selected, onClick }: Props) {
             <span className="text-[11px] text-gray-400">{thread.timestamp}</span>
           )}
           {isUnread && (
-            <span className="min-w-[18px] h-[18px] bg-blue-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+            <span className={cn(
+              'min-w-[18px] h-[18px] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none',
+              isWaiting ? 'bg-amber-500' : 'bg-blue-900'
+            )}>
               {thread.unreadCount}
             </span>
           )}

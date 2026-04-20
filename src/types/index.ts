@@ -33,6 +33,7 @@ export interface Message {
   text: string;
   timestamp: string;
   automated?: boolean; // true for bot-sent agent messages
+  status?: 'sending' | 'sent' | 'failed'; // delivery state for agent messages
 }
 
 export interface Thread {

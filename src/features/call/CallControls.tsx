@@ -102,7 +102,7 @@ export default function CallControls({
             </span>
           )}
         </div>
-        <span className={cn('text-2xl font-bold tabular-nums leading-none', timerColor)}>
+        <span className={cn('text-xl font-bold tabular-nums leading-none', timerColor)}>
           {isActive || isConsult ? formatDuration(elapsed) : isOnHold ? formatDuration(elapsed) : '—'}
         </span>
       </div>
@@ -217,7 +217,7 @@ export default function CallControls({
                       <div key={i} className="flex items-start gap-2.5">
                         <span className={cn(
                           'text-[9px] font-bold px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0',
-                          c.type === 'Call' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'
+                          c.type === 'Call' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
                         )}>
                           {c.type.toUpperCase()}
                         </span>

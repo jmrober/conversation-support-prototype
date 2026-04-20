@@ -5,7 +5,9 @@ import { cn } from '../../utils/cn';
 interface Props {
   presence: PresenceStatus;
   onChange: (p: PresenceStatus) => void;
-  wrapUpSecondsLeft?: number; // defined only while wrap-up timer is running
+  wrapUpSecondsLeft?: number;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 const OPTIONS: { value: PresenceStatus; label: string }[] = [
@@ -38,8 +40,9 @@ const LABEL_COLOR: Record<PresenceStatus, string> = {
   offline: 'text-gray-400',
 };
 
-export default function PresenceControl({ presence, onChange, wrapUpSecondsLeft }: Props) {
+export default function PresenceControl({ presence, onChange, wrapUpSecondsLeft, expanded, onToggleExpand }: Props) {
   const [open, setOpen] = useState(false);
+  const [offlineConfirm, setOfflineConfirm] = useState(false);
   const isWrapUp = presence === 'wrap-up' && wrapUpSecondsLeft !== undefined;
   const label = OPTIONS.find((o) => o.value === presence)?.label ?? presence;
 
@@ -96,6 +99,23 @@ export default function PresenceControl({ presence, onChange, wrapUpSecondsLeft 
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
+
+        {/* Expand / collapse toggle */}
+        {onToggleExpand && (
+          <button
+            onClick={onToggleExpand}
+            title={expanded ? 'Collapse panel' : 'Expand panel'}
+            className="w-7 h-7 rounded-md flex items-center justify-center text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-colors flex-shrink-0"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="1.5" y="1.5" width="15" height="15" rx="2" />
+              {expanded
+                ? <line x1="11.5" y1="1.5" x2="11.5" y2="16.5" />
+                : <line x1="6.5" y1="1.5" x2="6.5" y2="16.5" />
+              }
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Dropdown */}
@@ -110,25 +130,50 @@ export default function PresenceControl({ presence, onChange, wrapUpSecondsLeft 
                 </p>
               </div>
             )}
-            {OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => { onChange(opt.value); setOpen(false); }}
-                className={cn(
-                  'w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors',
-                  presence === opt.value ? 'bg-gray-50 font-semibold' : ''
-                )}
-              >
-                <span className={cn('w-2 h-2 rounded-full flex-shrink-0', DOT[opt.value])} />
-                <span className={cn('flex-1 text-left', LABEL_COLOR[opt.value])}>{opt.label}</span>
-                {opt.value === 'available' && (
-                  <span className="text-[9px] text-emerald-700 font-medium">Accepting</span>
-                )}
-                {opt.value === 'wrap-up' && (
-                  <span className="text-[9px] text-yellow-700 font-medium">30s timer</span>
-                )}
-              </button>
-            ))}
+            {offlineConfirm ? (
+              <div className="px-3 py-2.5">
+                <p className="text-xs font-medium text-gray-700 mb-1">Go offline?</p>
+                <p className="text-[10px] text-gray-400 mb-2 leading-snug">You'll stop receiving new contacts.</p>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setOfflineConfirm(false)}
+                    className="flex-1 h-7 text-xs font-medium border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { onChange('offline'); setOfflineConfirm(false); setOpen(false); }}
+                    className="flex-1 h-7 text-xs font-semibold rounded-lg bg-gray-800 text-white hover:bg-gray-700 transition-colors"
+                  >
+                    Go Offline
+                  </button>
+                </div>
+              </div>
+            ) : (
+              OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    if (opt.value === 'offline') { setOfflineConfirm(true); return; }
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    'w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors',
+                    presence === opt.value ? 'bg-gray-50 font-semibold' : ''
+                  )}
+                >
+                  <span className={cn('w-2 h-2 rounded-full flex-shrink-0', DOT[opt.value])} />
+                  <span className={cn('flex-1 text-left', LABEL_COLOR[opt.value])}>{opt.label}</span>
+                  {opt.value === 'available' && (
+                    <span className="text-[9px] text-emerald-700 font-medium">Accepting</span>
+                  )}
+                  {opt.value === 'wrap-up' && (
+                    <span className="text-[9px] text-yellow-700 font-medium">30s timer</span>
+                  )}
+                </button>
+              ))
+            )}
           </div>
         </>
       )}

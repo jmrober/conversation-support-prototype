@@ -69,7 +69,7 @@ export default function ChatComposer({ value, onChange, onSend, onAISuggest, onQ
             onClick={onAISuggest}
             aria-label="AI Suggest"
             title="AI Suggest"
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2l1.09 3.26L16 6l-2.91.74L12 10l-1.09-3.26L8 6l2.91-.74L12 2zm6 10l.73 2.18L21 15l-2.27.82L18 18l-.73-2.18L15 15l2.27-.82L18 12zm-12 0l.73 2.18L9 15l-2.27.82L6 18l-.73-2.18L3 15l2.27-.82L6 12z" />
@@ -81,7 +81,7 @@ export default function ChatComposer({ value, onChange, onSend, onAISuggest, onQ
             onClick={onQuickReplies}
             aria-label="Quick Replies"
             title="Quick Replies"
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200 transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />

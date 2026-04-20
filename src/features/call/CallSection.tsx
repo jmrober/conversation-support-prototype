@@ -154,12 +154,11 @@ export default function CallSection({
                     triggerFeedback('On Hold');
                   }}
                   title="Hold"
-                  className="flex-1 flex flex-col items-center justify-center gap-0.5 h-11 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex-1 flex items-center justify-center h-11 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
                   </svg>
-                  <span className="text-[11px] font-medium">Hold</span>
                 </button>
                 <button
                   onClick={() => {
@@ -168,7 +167,7 @@ export default function CallSection({
                   }}
                   title={muted ? 'Unmute' : 'Mute'}
                   className={cn(
-                    'flex-1 flex flex-col items-center justify-center gap-0.5 h-11 rounded-lg border transition-colors',
+                    'flex-1 flex items-center justify-center h-11 rounded-lg border transition-colors',
                     muted
                       ? 'bg-gray-800 text-white border-gray-800'
                       : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -184,17 +183,15 @@ export default function CallSection({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     )}
                   </svg>
-                  <span className="text-[11px] font-medium">{muted ? 'Unmute' : 'Mute'}</span>
                 </button>
                 <button
                   onClick={onOpenDirectory}
-                  title="Directory"
-                  className="flex-1 flex flex-col items-center justify-center gap-0.5 h-11 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                  title="Transfer Call"
+                  className="flex-1 flex items-center justify-center h-11 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span className="text-[11px] font-medium">Transfer</span>
                 </button>
                 <HoldToEndButton
                   onConfirm={() => onEndCall(customerCall.id)}

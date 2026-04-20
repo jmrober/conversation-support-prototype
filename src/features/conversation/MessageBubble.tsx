@@ -58,6 +58,16 @@ export default function MessageBubble({ message }: Props) {
         >
           {message.text}
         </div>
+        {/* Delivery status */}
+        {isAgent && message.status === 'failed' && (
+          <div className="flex items-center gap-1.5 px-1">
+            <svg className="w-3 h-3 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <span className="text-[10px] text-red-500 font-medium">Failed to send</span>
+            <button className="text-[10px] text-blue-600 font-semibold underline hover:text-blue-800">Retry</button>
+          </div>
+        )}
         <span className="text-[10px] text-gray-400 px-1">{message.timestamp}</span>
       </div>
     </div>
