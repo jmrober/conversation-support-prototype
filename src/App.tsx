@@ -32,6 +32,7 @@ export default function App() {
   const [wrapUpActive, setWrapUpActive] = useState(false);
   const [showWrapUpOverlay, setShowWrapUpOverlay] = useState(false);
   const [directoryIntent, setDirectoryIntent] = useState<'outbound' | 'internal-chat'>('outbound');
+  const [railExpanded, setRailExpanded] = useState(false);
   const [assistTab, setAssistTab] = useState<'suggested' | 'library'>('suggested');
 
   const showChatLimit = () => {
@@ -390,11 +391,25 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-gray-200 items-stretch">
-      <div className="flex-1 flex items-center justify-center text-gray-400 text-sm select-none">
-        Agent Workbench
-      </div>
-
-      <div className="w-[380px] flex-shrink-0 border-l border-gray-300 bg-white relative flex flex-col overflow-hidden shadow-xl">
+      <div
+        style={{ width: railExpanded ? 640 : 380 }}
+        className="flex-shrink-0 border-r border-gray-300 bg-white relative flex flex-col overflow-hidden shadow-xl transition-all duration-300 ease-in-out"
+      >
+        {/* Expand / collapse toggle — top-right corner */}
+        <button
+          onClick={() => setRailExpanded((e) => !e)}
+          title={railExpanded ? 'Collapse panel' : 'Expand panel'}
+          className="absolute top-3 right-3 z-50 w-7 h-7 rounded-md flex items-center justify-center text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+        >
+          {/* Panel toggle icon — rectangle with sidebar divider */}
+          <svg className="w-4 h-4" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="1.5" y="1.5" width="15" height="15" rx="2" />
+            {railExpanded
+              ? <line x1="11.5" y1="1.5" x2="11.5" y2="16.5" />
+              : <line x1="6.5" y1="1.5" x2="6.5" y2="16.5" />
+            }
+          </svg>
+        </button>
         <PresenceControl
           presence={presence}
           onChange={handlePresenceChange}
@@ -524,6 +539,10 @@ export default function App() {
             onClose={() => setActivePanel(null)}
           />
         )}
+      </div>
+
+      <div className="flex-1 flex items-center justify-center text-gray-400 text-sm select-none">
+        Agent Workbench
       </div>
     </div>
   );
