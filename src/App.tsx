@@ -318,6 +318,13 @@ export default function App() {
     }, 1800);
   };
 
+  const handleEndChat = () => {
+    if (!selectedId) return;
+    updateThread(selectedId, { status: 'ended' });
+    setSelectedId(null);
+    setView('list');
+  };
+
   const handleWarmTransfer = () => {
     if (!selectedId) return;
     const consultThread = threads.find((t) => t.id === selectedId);
@@ -506,6 +513,7 @@ export default function App() {
               onOpenDirectory={() => setActivePanel('directory')}
               onOpenResponseAssist={(tab) => { setAssistTab(tab); setActivePanel('responseassist'); }}
               onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
+              onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
               onStartCall={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? () => handleOutboundCall({ id: selectedThread.id, name: selectedThread.participantName, role: selectedThread.participantRole ?? '', department: '', extension: '', available: true, initials: '' }) : undefined}
             />
           </>

@@ -24,10 +24,10 @@ const HEADER_LABEL: Record<string, string> = {
 };
 
 const CHAT_QUEUES = [
-  { id: 'q-billing',   name: 'Billing Support',    icon: '💳' },
-  { id: 'q-tech',      name: 'Technical Support',   icon: '🔧' },
-  { id: 'q-returns',   name: 'Returns & Refunds',   icon: '↩️' },
-  { id: 'q-general',   name: 'General Enquiries',   icon: '💬' },
+  { id: 'q-billing',  name: 'Billing Support',   short: 'Billing',   icon: '💳' },
+  { id: 'q-tech',     name: 'Technical Support',  short: 'Technical', icon: '🔧' },
+  { id: 'q-returns',  name: 'Returns & Refunds',  short: 'Returns',   icon: '↩️' },
+  { id: 'q-general',  name: 'General Enquiries',  short: 'General',   icon: '💬' },
 ];
 
 const DEPARTMENTS = ['All', ...Array.from(new Set(mockDirectory.map((e) => e.department))).sort()];
@@ -71,6 +71,8 @@ export default function DirectoryPanel({
   const [coldTarget, setColdTarget] = useState<DirectoryEntry | null>(null);
   // Warm transfer: inline confirm (no full-screen preview)
   const [warmConfirmId, setWarmConfirmId] = useState<string | null>(null);
+  // Chat-transfer: selected queue (null = show person directory)
+  const [selectedQueueId, setSelectedQueueId] = useState<string | null>(null);
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) => {
@@ -245,25 +247,6 @@ export default function DirectoryPanel({
             </div>
           )}
 
-          {/* Chat transfer — queue section */}
-          {mode === 'chat-transfer' && (
-            <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2.5">Transfer to Queue</p>
-              <div className="grid grid-cols-2 gap-2">
-                {CHAT_QUEUES.map((q) => (
-                  <button
-                    key={q.id}
-                    onClick={() => onChatTransferToQueue?.(q.name)}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 text-left transition-colors group"
-                  >
-                    <span className="text-base leading-none flex-shrink-0">{q.icon}</span>
-                    <span className="text-[11px] font-medium text-gray-700 group-hover:text-blue-800 leading-tight">{q.name}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mt-4 mb-1">— or transfer to a person —</p>
-            </div>
-          )}
 
           {/* Directory list */}
           {(mode !== 'active-call' || callTab === 'directory') && (
@@ -284,11 +267,31 @@ export default function DirectoryPanel({
                   />
                 </div>
 
-                {/* Filter chips — Favorites first, then departments */}
+                {/* Filter chips — queues (chat-transfer only), Favorites, then departments */}
                 <div className="flex flex-wrap gap-1.5">
+                  {/* Queue chips — chat-transfer mode only */}
+                  {mode === 'chat-transfer' && CHAT_QUEUES.map((q) => (
+                    <button
+                      key={q.id}
+                      onClick={() => {
+                        setSelectedQueueId(selectedQueueId === q.id ? null : q.id);
+                        setDept('All');
+                      }}
+                      className={cn(
+                        'flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-full border transition-colors',
+                        selectedQueueId === q.id
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-700'
+                      )}
+                    >
+                      <span className="leading-none">{q.icon}</span>
+                      {q.short}
+                    </button>
+                  ))}
+
                   {/* Favorites chip */}
                   <button
-                    onClick={() => setDept(dept === FAVORITES_KEY ? 'All' : FAVORITES_KEY)}
+                    onClick={() => { setSelectedQueueId(null); setDept(dept === FAVORITES_KEY ? 'All' : FAVORITES_KEY); }}
                     className={cn(
                       'flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-full border transition-colors',
                       dept === FAVORITES_KEY
@@ -322,7 +325,7 @@ export default function DirectoryPanel({
                   {DEPARTMENTS.map((d) => (
                     <button
                       key={d}
-                      onClick={() => setDept(d)}
+                      onClick={() => { setSelectedQueueId(null); setDept(d); }}
                       className={cn(
                         'text-xs font-medium px-3 py-2 rounded-full border transition-colors',
                         dept === d
@@ -337,7 +340,32 @@ export default function DirectoryPanel({
               </div>
 
               <div className="flex-1 overflow-y-auto">
-                {filtered.length === 0 ? (
+                {/* Queue transfer CTA — shown when a queue chip is selected */}
+                {mode === 'chat-transfer' && selectedQueueId ? (
+                  (() => {
+                    const q = CHAT_QUEUES.find((q) => q.id === selectedQueueId)!;
+                    return (
+                      <div className="flex flex-col items-center justify-center gap-5 h-full px-8 pb-12">
+                        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-3xl">
+                          {q.icon}
+                        </div>
+                        <div className="text-center">
+                          <p className="text-base font-semibold text-gray-800">{q.name}</p>
+                          <p className="text-xs text-gray-400 mt-1 leading-snug">The next available agent in this queue will pick up the chat.</p>
+                        </div>
+                        <button
+                          onClick={() => { onChatTransferToQueue?.(q.name); }}
+                          className="w-full flex items-center justify-center gap-2 h-12 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          </svg>
+                          Transfer to {q.name}
+                        </button>
+                      </div>
+                    );
+                  })()
+                ) : filtered.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
                     {dept === FAVORITES_KEY ? (
                       <>
