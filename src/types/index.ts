@@ -6,8 +6,12 @@ export type ThreadType =
 
 export type ThreadStatus =
   | 'unread'
+  | 'ringing'
   | 'waiting'
   | 'active'
+  | 'idle'
+  | 'idle-declared'
+  | 'escalated'
   | 'on-hold'
   | 'consulting'
   | 'transferring'
@@ -48,11 +52,20 @@ export interface Thread {
   unreadCount: number;
   messages: Message[];
   chatMode?: 'live' | 'async'; // live = both parties actively engaged; async = no urgency
+  // context layer
+  slaDeadlineAt?: number;      // epoch ms — when SLA expires
+  sentiment?: 'positive' | 'neutral' | 'negative' | 'escalating';
+  issueTag?: string;
+  accountTier?: 'standard' | 'premium' | 'gold';
   // call-specific
   callDirection?: 'inbound' | 'outbound';
   callStartedAt?: number; // epoch ms, for live timer
   muted?: boolean;
   consultingWithThreadId?: string;
+  // scenario fields
+  relatedChatId?: string;       // for calls: which chat spawned this call
+  transferSuggestion?: string;  // suggested queue name for intelligent transfer
+  hasProfile?: boolean;         // whether this chat has a customer profile attached
 }
 
 export interface DirectoryEntry {
@@ -63,6 +76,17 @@ export interface DirectoryEntry {
   extension: string;
   available: boolean;
   initials: string;
+}
+
+export interface QueueEntry {
+  id: string;
+  name: string;
+  short: string;
+  icon: string;
+  available: boolean;
+  workingHours: string;
+  handles: string[];
+  doesNotHandle: string[];
 }
 
 export interface QuickResponse {

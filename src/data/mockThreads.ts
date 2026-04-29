@@ -1,5 +1,8 @@
 import type { Thread } from '../types';
 
+const NOW = Date.now();
+const MIN = 60_000;
+
 export const mockThreads: Thread[] = [
   // ── Active call ────────────────────────────────────────────────────────────
   {
@@ -13,21 +16,49 @@ export const mockThreads: Thread[] = [
     unreadCount: 0,
     messages: [],
     callDirection: 'inbound',
-    callStartedAt: Date.now() - 147_000,
+    callStartedAt: NOW - 147_000,
     muted: false,
+    issueTag: 'Billing Dispute',
+    accountTier: 'gold',
+    sentiment: 'negative',
   },
 
-  // ── Live customer chat (frustrated, unread) ────────────────────────────────
+  // ── Escalated chat (gold tier, demands manager) — floats to top ──────────
+  {
+    id: 'thread-7',
+    type: 'customer-chat',
+    status: 'escalated',
+    chatMode: 'live',
+    participantName: 'Rachel Kim',
+    caseId: 'CS-4824',
+    lastMessage: "This is completely unacceptable. I want to speak to a manager.",
+    timestamp: '10:38',
+    unreadCount: 1,
+    sentiment: 'escalating',
+    issueTag: 'Service Complaint',
+    accountTier: 'gold',
+    messages: [
+      { id: 'm7-1', sender: 'customer', senderName: 'Rachel Kim', text: "I've been waiting 3 weeks for my replacement and nobody has contacted me.", timestamp: '10:33' },
+      { id: 'm7-2', sender: 'agent', senderName: 'You', text: "I'm really sorry about that, Rachel. Let me look into your case right now.", timestamp: '10:35' },
+      { id: 'm7-3', sender: 'customer', senderName: 'Rachel Kim', text: "This is completely unacceptable. I want to speak to a manager.", timestamp: '10:38' },
+    ],
+  },
+
+  // ── Live customer chat (frustrated, waiting) — SLA expiring in ~4 min ────
   {
     id: 'thread-1',
     type: 'customer-chat',
-    status: 'active',
+    status: 'waiting',
     chatMode: 'live',
     participantName: 'Alice Martin',
     caseId: 'CS-4821',
     lastMessage: "It's been over two weeks — I'm really frustrated.",
     timestamp: '10:42',
     unreadCount: 2,
+    slaDeadlineAt: NOW + 4.2 * MIN,
+    sentiment: 'negative',
+    issueTag: 'Delayed Order',
+    accountTier: 'standard',
     messages: [
       {
         id: 'm1-0',
@@ -45,7 +76,7 @@ export const mockThreads: Thread[] = [
     ],
   },
 
-  // ── Async customer chat (waiting, no agent response yet) ───────────────────
+  // ── Async customer chat (waiting, SLA expiring in ~2 min) ─────────────────
   {
     id: 'thread-3',
     type: 'customer-chat',
@@ -56,6 +87,10 @@ export const mockThreads: Thread[] = [
     lastMessage: 'Can I get a refund for item #4421?',
     timestamp: '9:15',
     unreadCount: 3,
+    slaDeadlineAt: NOW + 2.1 * MIN,
+    sentiment: 'neutral',
+    issueTag: 'Refund Request',
+    accountTier: 'standard',
     messages: [
       { id: 'm3-1', sender: 'customer', senderName: 'Ben Torres', text: "Hi, I bought a pair of shoes last week but they're the wrong size.", timestamp: '9:12' },
       { id: 'm3-2', sender: 'customer', senderName: 'Ben Torres', text: "I'd like to either exchange or get a refund.", timestamp: '9:13' },
@@ -80,7 +115,7 @@ export const mockThreads: Thread[] = [
     ],
   },
 
-  // ── Async customer chat: auto-welcome + awaiting agent ─────────────────────
+  // ── Async customer chat (waiting, SLA expiring in ~9 min) ─────────────────
   {
     id: 'thread-5',
     type: 'customer-chat',
@@ -91,6 +126,10 @@ export const mockThreads: Thread[] = [
     lastMessage: "I can't log into my account at all.",
     timestamp: '9:55',
     unreadCount: 1,
+    slaDeadlineAt: NOW + 9.3 * MIN,
+    sentiment: 'neutral',
+    issueTag: 'Account Access',
+    accountTier: 'premium',
     messages: [
       {
         id: 'm5-0',
@@ -104,7 +143,7 @@ export const mockThreads: Thread[] = [
     ],
   },
 
-  // ── Resolved chat with auto-close system message ───────────────────────────
+  // ── Resolved chat ──────────────────────────────────────────────────────────
   {
     id: 'thread-6',
     type: 'customer-chat',
@@ -115,6 +154,9 @@ export const mockThreads: Thread[] = [
     lastMessage: 'Chat closed after 2 minutes of inactivity.',
     timestamp: '10:22',
     unreadCount: 0,
+    sentiment: 'positive',
+    issueTag: 'Promo Code',
+    accountTier: 'standard',
     messages: [
       { id: 'm6-1', sender: 'customer', senderName: 'Maya Patel', text: 'My promo code SUMMER20 is not applying at checkout.', timestamp: '10:15' },
       { id: 'm6-2', sender: 'agent', senderName: 'You', text: 'That code expired on April 1st. I can apply a 15% discount manually for you today.', timestamp: '10:18' },

@@ -14,6 +14,8 @@ interface Props {
   onWarmTransfer: () => void;
   onOpenDirectory: () => void;
   onSelectCall: (id: string) => void;
+  relatedChat?: Thread | null;
+  onSwitchToChat?: (id: string) => void;
 }
 
 function LiveTimer({ thread }: { thread: Thread }) {
@@ -33,6 +35,8 @@ export default function CallSection({
   onWarmTransfer,
   onOpenDirectory,
   onSelectCall,
+  relatedChat,
+  onSwitchToChat,
 }: Props) {
   const [confirmWarm, setConfirmWarm] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -115,7 +119,7 @@ export default function CallSection({
             {/* Name + case */}
             <button
               onClick={() => onSelectCall(customerCall.id)}
-              className="text-left mb-3 group w-full"
+              className="text-left mb-1 group w-full"
             >
               <div className="text-[15px] font-semibold text-gray-900 group-hover:text-green-800 transition-colors leading-tight">
                 {customerCall.participantName}
@@ -124,6 +128,26 @@ export default function CallSection({
                 <div className="text-[11px] font-mono text-gray-400 mt-0.5">{customerCall.caseId}</div>
               )}
             </button>
+
+            {/* Related chat row */}
+            {relatedChat && onSwitchToChat && (
+              <div className="flex items-center gap-1.5 mb-3">
+                <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <span className="text-[11px] text-gray-400 truncate">
+                  Related chat: {relatedChat.participantName}
+                  {relatedChat.issueTag ? ` → ${relatedChat.issueTag}` : ''}
+                </span>
+                <button
+                  onClick={() => onSwitchToChat(relatedChat.id)}
+                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors flex-shrink-0"
+                >
+                  Switch →
+                </button>
+              </div>
+            )}
+            {!relatedChat && <div className="mb-3" />}
 
             {/* Controls */}
             {customerIsOnHold ? (
@@ -153,21 +177,22 @@ export default function CallSection({
                     onHoldToggle(customerCall.id);
                     triggerFeedback('On Hold');
                   }}
-                  title="Hold"
-                  className="flex-1 flex items-center justify-center h-11 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                  aria-label="Hold"
+                  className="flex-1 flex flex-col items-center justify-center gap-0.5 h-11 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
                   </svg>
+                  <span className="text-[9px] font-medium">Hold</span>
                 </button>
                 <button
                   onClick={() => {
                     onMuteToggle();
                     triggerFeedback(muted ? 'Mic on' : 'Muted');
                   }}
-                  title={muted ? 'Unmute' : 'Mute'}
+                  aria-label={muted ? 'Unmute' : 'Mute'}
                   className={cn(
-                    'flex-1 flex items-center justify-center h-11 rounded-lg border transition-colors',
+                    'flex-1 flex flex-col items-center justify-center gap-0.5 h-11 rounded-lg border transition-colors',
                     muted
                       ? 'bg-gray-800 text-white border-gray-800'
                       : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -183,15 +208,17 @@ export default function CallSection({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     )}
                   </svg>
+                  <span className="text-[9px] font-medium">{muted ? 'Unmute' : 'Mute'}</span>
                 </button>
                 <button
                   onClick={onOpenDirectory}
-                  title="Transfer Call"
-                  className="flex-1 flex items-center justify-center h-11 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                  aria-label="Transfer"
+                  className="flex-1 flex flex-col items-center justify-center gap-0.5 h-11 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
+                  <span className="text-[9px] font-medium">Transfer</span>
                 </button>
                 <HoldToEndButton
                   onConfirm={() => onEndCall(customerCall.id)}

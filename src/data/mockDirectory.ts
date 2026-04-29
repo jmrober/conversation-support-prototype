@@ -1,4 +1,84 @@
-import type { DirectoryEntry } from '../types';
+import type { DirectoryEntry, QueueEntry } from '../types';
+
+export const mockQueues: QueueEntry[] = [
+  {
+    id: 'q-billing',
+    name: 'Billing Support',
+    short: 'Billing',
+    icon: '💳',
+    available: true,
+    workingHours: 'Mon – Fri  8:00 am – 8:00 pm',
+    handles: [
+      'Invoice queries',
+      'Payment failures',
+      'Refund disputes',
+      'Account billing changes',
+      'Subscription management',
+    ],
+    doesNotHandle: [
+      'Technical support',
+      'Delivery enquiries',
+      'Returns & exchanges',
+    ],
+  },
+  {
+    id: 'q-tech',
+    name: 'Technical Support',
+    short: 'Technical',
+    icon: '🔧',
+    available: true,
+    workingHours: 'Mon – Sun  7:00 am – 11:00 pm',
+    handles: [
+      'Software issues & troubleshooting',
+      'Device setup & configuration',
+      'App & firmware problems',
+      'Warranty claims',
+    ],
+    doesNotHandle: [
+      'Billing disputes',
+      'Returns & exchanges',
+      'General order enquiries',
+    ],
+  },
+  {
+    id: 'q-returns',
+    name: 'Returns & Refunds',
+    short: 'Returns',
+    icon: '↩️',
+    available: false,
+    workingHours: 'Mon – Fri  9:00 am – 5:30 pm',
+    handles: [
+      'Return requests',
+      'Exchange processing',
+      'Refund status updates',
+      'Damaged or incorrect goods',
+    ],
+    doesNotHandle: [
+      'Billing queries',
+      'Technical support',
+      'Delivery tracking',
+    ],
+  },
+  {
+    id: 'q-general',
+    name: 'General Enquiries',
+    short: 'General',
+    icon: '💬',
+    available: true,
+    workingHours: 'Mon – Sun  8:00 am – 9:00 pm',
+    handles: [
+      'Product information',
+      'Order status',
+      'Store locations',
+      'Promotions & offers',
+    ],
+    doesNotHandle: [
+      'Billing disputes',
+      'Technical faults',
+      'Returns & exchanges',
+    ],
+  },
+];
 
 export const mockDirectory: DirectoryEntry[] = [
   { id: 'd1', name: 'Sam Okafor', role: 'Delivery Agent', department: 'Logistics', extension: '2341', available: true, initials: 'SO' },

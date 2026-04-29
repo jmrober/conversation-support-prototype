@@ -91,7 +91,7 @@ export default function PresenceControl({ presence, onChange, wrapUpSecondsLeft,
               : 'hover:bg-gray-100 text-gray-600'
           )}
         >
-          <span className={cn('w-2 h-2 rounded-full flex-shrink-0', DOT[presence], isWrapUp && 'animate-pulse')} />
+          <span className={cn('w-2 h-2 rounded-full flex-shrink-0', DOT[presence])} />
           <span className={cn('font-semibold', LABEL_COLOR[presence])}>
             {isWrapUp ? `Wrap-Up · ${wrapUpSecondsLeft}s` : label}
           </span>

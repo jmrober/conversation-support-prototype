@@ -68,7 +68,7 @@ export default function MessageBubble({ message }: Props) {
             <button className="text-[10px] text-blue-600 font-semibold underline hover:text-blue-800">Retry</button>
           </div>
         )}
-        <span className="text-[10px] text-gray-400 px-1">{message.timestamp}</span>
+        <time className="text-[10px] text-gray-400 px-1" aria-label={`Sent at ${message.timestamp}`}>{message.timestamp}</time>
       </div>
     </div>
   );

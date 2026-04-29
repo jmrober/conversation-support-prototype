@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { DirectoryEntry, Thread } from '../../types';
-import { mockDirectory } from '../../data/mockDirectory';
+import type { DirectoryEntry, QueueEntry, Thread } from '../../types';
+import { mockDirectory, mockQueues } from '../../data/mockDirectory';
 import { cn } from '../../utils/cn';
 
 interface Props {
@@ -14,6 +14,7 @@ interface Props {
   onChatTransferToQueue?: (queueName: string) => void;
   onDialNumber: (number: string) => void;
   onClose: () => void;
+  transferSuggestion?: string;
 }
 
 const HEADER_LABEL: Record<string, string> = {
@@ -23,12 +24,97 @@ const HEADER_LABEL: Record<string, string> = {
   'chat-transfer': 'Transfer Chat',
 };
 
-const CHAT_QUEUES = [
-  { id: 'q-billing',  name: 'Billing Support',   short: 'Billing',   icon: '💳' },
-  { id: 'q-tech',     name: 'Technical Support',  short: 'Technical', icon: '🔧' },
-  { id: 'q-returns',  name: 'Returns & Refunds',  short: 'Returns',   icon: '↩️' },
-  { id: 'q-general',  name: 'General Enquiries',  short: 'General',   icon: '💬' },
-];
+// ── Queue card — rich detail view ─────────────────────────────────────────────
+function QueueCard({ queue, mode, onTransferToQueue }: {
+  queue: QueueEntry;
+  mode: string;
+  onTransferToQueue?: (name: string) => void;
+}) {
+  return (
+    <div className="mx-4 my-3 rounded-xl border border-gray-100 bg-white overflow-hidden">
+      {/* Queue header */}
+      <div className="px-4 pt-4 pb-3 flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-xl flex-shrink-0">
+          {queue.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-gray-900">{queue.name}</span>
+            <span className={cn(
+              'text-[10px] font-bold px-2 py-0.5 rounded-full leading-none',
+              queue.available
+                ? 'bg-green-100 text-green-700'
+                : 'bg-gray-100 text-gray-500'
+            )}>
+              {queue.available ? 'Available' : 'Closed'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 mt-1">
+            <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-[11px] text-gray-400">{queue.workingHours}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Handles / Doesn't handle */}
+      <div className="grid grid-cols-2 gap-px bg-gray-100 border-t border-gray-100">
+        <div className="bg-white px-3 py-3">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Handles</p>
+          <ul className="flex flex-col gap-1.5">
+            {queue.handles.map((item) => (
+              <li key={item} className="flex items-start gap-1.5">
+                <svg className="w-3 h-3 text-green-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-[11px] text-gray-600 leading-tight">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="bg-white px-3 py-3">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Doesn't handle</p>
+          <ul className="flex flex-col gap-1.5">
+            {queue.doesNotHandle.map((item) => (
+              <li key={item} className="flex items-start gap-1.5">
+                <svg className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span className="text-[11px] text-gray-500 leading-tight">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Action */}
+      {mode === 'chat-transfer' && (
+        <div className="px-4 py-3 border-t border-gray-100">
+          <button
+            onClick={() => onTransferToQueue?.(queue.name)}
+            disabled={!queue.available}
+            className={cn(
+              'w-full h-9 rounded-lg text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-colors',
+              queue.available
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            )}
+          >
+            {queue.available ? (
+              <>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+                Transfer to {queue.short}
+              </>
+            ) : 'Queue closed'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const DEPARTMENTS = ['All', ...Array.from(new Set(mockDirectory.map((e) => e.department))).sort()];
 const FAVORITES_KEY = '__favorites__';
@@ -45,10 +131,12 @@ export default function DirectoryPanel({
   onChatTransferToQueue,
   onDialNumber,
   onClose,
+  transferSuggestion,
 }: Props) {
   const [query, setQuery] = useState('');
   const [dialInput, setDialInput] = useState('');
   const [callTab, setCallTab] = useState<'directory' | 'dial'>('directory');
+  const [directoryTab, setDirectoryTab] = useState<'people' | 'queues'>('people');
   const [dept, setDept] = useState('All');
 
   // Favorites — persisted to localStorage
@@ -72,7 +160,7 @@ export default function DirectoryPanel({
   // Warm transfer: inline confirm (no full-screen preview)
   const [warmConfirmId, setWarmConfirmId] = useState<string | null>(null);
   // Chat-transfer: selected queue (null = show person directory)
-  const [selectedQueueId, setSelectedQueueId] = useState<string | null>(null);
+  const [_selectedQueueId, setSelectedQueueId] = useState<string | null>(null);
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) => {
@@ -140,7 +228,7 @@ export default function DirectoryPanel({
       {/* ── COLD TRANSFER CONFIRMATION ── */}
       {coldTarget && (
         <div className="flex-1 flex flex-col px-5 pt-6 pb-8">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-5">Cold Transfer</p>
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-5">Transfer to Queue or Person</p>
           <div className="flex flex-col gap-4 mb-6">
             {[
               {
@@ -251,6 +339,66 @@ export default function DirectoryPanel({
           {/* Directory list */}
           {(mode !== 'active-call' || callTab === 'directory') && (
             <>
+              {/* People / Queues tab strip — hidden for internal-chat */}
+              {mode !== 'internal-chat' && (
+                <div className="flex border-b border-gray-100 flex-shrink-0">
+                  <button
+                    onClick={() => setDirectoryTab('people')}
+                    className={cn('flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold border-b-2 transition-colors',
+                      directoryTab === 'people' ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-400 hover:text-gray-600')}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    People
+                  </button>
+                  <button
+                    onClick={() => setDirectoryTab('queues')}
+                    className={cn('flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold border-b-2 transition-colors',
+                      directoryTab === 'queues' ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-400 hover:text-gray-600')}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Queues
+                  </button>
+                </div>
+              )}
+
+              {/* ── Queues tab ── */}
+              {directoryTab === 'queues' && mode !== 'internal-chat' ? (
+                <div className="flex-1 overflow-y-auto py-1">
+                  {mockQueues.map((q) => (
+                    <QueueCard
+                      key={q.id}
+                      queue={q}
+                      mode={mode}
+                      onTransferToQueue={onChatTransferToQueue}
+                    />
+                  ))}
+                </div>
+              ) : (
+              <>
+              {/* Transfer recommendation banner — active-call mode only */}
+              {mode === 'active-call' && transferSuggestion && (
+                <div className="mx-4 mt-3 flex items-center gap-2.5 px-3 py-2.5 bg-blue-50 border-l-4 border-blue-500 rounded-lg flex-shrink-0">
+                  <span className="text-blue-600 text-sm flex-shrink-0">⚡</span>
+                  <span className="flex-1 text-[11px] font-semibold text-blue-800 leading-tight">
+                    Recommended: {transferSuggestion}
+                  </span>
+                  <button
+                    onClick={() => {
+                      // Find the queue entry by name match and trigger cold transfer
+                      // For now, we signal a queue transfer via a synthetic entry
+                      onClose();
+                    }}
+                    className="flex-shrink-0 text-[11px] font-semibold px-2.5 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Transfer
+                  </button>
+                </div>
+              )}
+
               <div className="px-4 pt-3 pb-2 border-b border-gray-100 flex-shrink-0">
                 {/* Search */}
                 <div className="relative mb-3">
@@ -267,28 +415,8 @@ export default function DirectoryPanel({
                   />
                 </div>
 
-                {/* Filter chips — queues (chat-transfer only), Favorites, then departments */}
+                {/* Filter chips — Favorites, then departments */}
                 <div className="flex flex-wrap gap-1.5">
-                  {/* Queue chips — chat-transfer mode only */}
-                  {mode === 'chat-transfer' && CHAT_QUEUES.map((q) => (
-                    <button
-                      key={q.id}
-                      onClick={() => {
-                        setSelectedQueueId(selectedQueueId === q.id ? null : q.id);
-                        setDept('All');
-                      }}
-                      className={cn(
-                        'flex items-center gap-1 text-xs font-medium px-3 py-2 rounded-full border transition-colors',
-                        selectedQueueId === q.id
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-700'
-                      )}
-                    >
-                      <span className="leading-none">{q.icon}</span>
-                      {q.short}
-                    </button>
-                  ))}
-
                   {/* Favorites chip */}
                   <button
                     onClick={() => { setSelectedQueueId(null); setDept(dept === FAVORITES_KEY ? 'All' : FAVORITES_KEY); }}
@@ -340,32 +468,7 @@ export default function DirectoryPanel({
               </div>
 
               <div className="flex-1 overflow-y-auto">
-                {/* Queue transfer CTA — shown when a queue chip is selected */}
-                {mode === 'chat-transfer' && selectedQueueId ? (
-                  (() => {
-                    const q = CHAT_QUEUES.find((q) => q.id === selectedQueueId)!;
-                    return (
-                      <div className="flex flex-col items-center justify-center gap-5 h-full px-8 pb-12">
-                        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-3xl">
-                          {q.icon}
-                        </div>
-                        <div className="text-center">
-                          <p className="text-base font-semibold text-gray-800">{q.name}</p>
-                          <p className="text-xs text-gray-400 mt-1 leading-snug">The next available agent in this queue will pick up the chat.</p>
-                        </div>
-                        <button
-                          onClick={() => { onChatTransferToQueue?.(q.name); }}
-                          className="w-full flex items-center justify-center gap-2 h-12 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                          </svg>
-                          Transfer to {q.name}
-                        </button>
-                      </div>
-                    );
-                  })()
-                ) : filtered.length === 0 ? (
+                {filtered.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-2 py-12 px-6 text-center">
                     {dept === FAVORITES_KEY ? (
                       <>
@@ -512,7 +615,7 @@ export default function DirectoryPanel({
                                       : 'border-gray-200 text-gray-300 cursor-not-allowed'
                                   )}
                                 >
-                                  Cold
+                                  Transfer
                                 </button>
                                 <button
                                   onClick={() => entry.available && setWarmConfirmId(entry.id)}
@@ -524,7 +627,7 @@ export default function DirectoryPanel({
                                       : 'bg-gray-100 text-gray-300 cursor-not-allowed'
                                   )}
                                 >
-                                  Warm
+                                  Consult
                                 </button>
                               </>
                             )
@@ -535,6 +638,8 @@ export default function DirectoryPanel({
                   })
                 )}
               </div>
+              </>
+              )}
             </>
           )}
         </>

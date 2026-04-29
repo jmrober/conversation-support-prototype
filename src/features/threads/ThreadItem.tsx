@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import type { Thread, ThreadStatus, ThreadType } from '../../types';
 import { cn } from '../../utils/cn';
 
@@ -5,15 +6,19 @@ interface Props {
   thread: Thread;
   selected: boolean;
   onClick: () => void;
+  compact?: boolean; // compressed chip view during active call
 }
 
-// Only show a badge for states that genuinely need attention
-const ATTENTION_BADGE: Partial<Record<ThreadStatus, { label: string; classes: string }>> = {
-  waiting:      { label: 'Waiting',     classes: 'bg-gray-50 text-gray-500 border border-gray-200' },
-  'on-hold':    { label: 'On Hold',     classes: 'bg-amber-50 text-amber-700 border border-amber-200' },
-  consulting:   { label: 'Consulting',  classes: 'bg-slate-50 text-slate-600 border border-slate-200' },
-  transferring: { label: 'Transferring',classes: 'bg-blue-50 text-blue-800 border border-blue-200' },
-  transferred:  { label: 'Transferred', classes: 'bg-gray-50 text-gray-500 border border-gray-200' },
+// ── State badge system ────────────────────────────────────────────────────────
+// Only shown for states that carry meaningful signal.
+const STATE_BADGE: Partial<Record<ThreadStatus, { label: string; classes: string }>> = {
+  escalated:     { label: 'ESCALATED',    classes: 'bg-red-600 text-white' },
+  waiting:       { label: 'WAITING',      classes: 'bg-amber-100 text-amber-800' },
+  idle:          { label: 'IDLE',         classes: 'bg-gray-100 text-gray-500' },
+  'idle-declared': { label: 'RESEARCHING', classes: 'bg-gray-100 text-gray-500' },
+  'on-hold':     { label: 'ON HOLD',      classes: 'bg-blue-100 text-blue-700' },
+  consulting:    { label: 'CONSULTING',   classes: 'bg-slate-100 text-slate-600' },
+  transferring:  { label: 'TRANSFERRING', classes: 'bg-blue-50 text-blue-700' },
 };
 
 const LEFT_ACCENT: Record<ThreadType, string> = {
@@ -30,7 +35,51 @@ const ICON_COLOR: Record<ThreadType, string> = {
   'internal-call': 'text-slate-500',
 };
 
-/** Returns "Xm" or "Xh Ym" elapsed since a HH:MM timestamp string (today). */
+// ── Live SLA timer ────────────────────────────────────────────────────────────
+function formatRemaining(ms: number): string {
+  const sec = Math.floor(Math.abs(ms) / 1000);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function SLATimer({ slaDeadlineAt, fallback }: { slaDeadlineAt: number; fallback: string }) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const remainingMs = slaDeadlineAt - now;
+  const remainingSec = remainingMs / 1000;
+
+  if (remainingSec > 10 * 60) {
+    // Far enough out — show elapsed wait time, no pressure
+    return <span className="text-[11px] text-gray-400">{fallback}</span>;
+  }
+  if (remainingSec > 5 * 60) {
+    return (
+      <span className="text-[11px] font-semibold tabular-nums text-amber-600">
+        {formatRemaining(remainingMs)}
+      </span>
+    );
+  }
+  if (remainingSec > 0) {
+    return (
+      <span className="text-[11px] font-bold tabular-nums text-red-600">
+        {formatRemaining(remainingMs)}
+      </span>
+    );
+  }
+  return (
+    <span className="text-[9px] font-bold tracking-wide text-red-600 uppercase">
+      Overdue
+    </span>
+  );
+}
+
+/** Elapsed time since a HH:MM timestamp string (today). */
 function waitAge(timestamp: string): string {
   const now = new Date();
   const [rawTime, period] = timestamp.split(' ');
@@ -61,17 +110,13 @@ function ChannelIcon({ type }: { type: ThreadType }) {
       </svg>
     );
   }
-
   if (isInternal) {
-    // Person/colleague icon for internal chats
     return (
       <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
       </svg>
     );
   }
-
-  // Customer chat bubble
   return (
     <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -79,70 +124,114 @@ function ChannelIcon({ type }: { type: ThreadType }) {
   );
 }
 
-function ChatModeIndicator({ mode }: { mode?: 'live' | 'async' }) {
-  if (mode === 'live') {
-    return (
-      <span className="flex items-center gap-1 text-[9px] font-bold text-green-600 uppercase tracking-wide flex-shrink-0">
-        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-        Live
+// ── Compact row (used in compressed call view — replaces pills) ───────────────
+function CompactRow({ thread, selected, onClick }: Props) {
+  const isEscalated = thread.status === 'escalated';
+  const isWaiting = thread.status === 'waiting';
+  const badge = STATE_BADGE[thread.status];
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'w-full flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-100 text-left transition-colors',
+        selected
+          ? 'bg-blue-50 border-l-2 border-l-blue-500'
+          : isEscalated
+          ? 'bg-red-50 border-l-2 border-l-red-500 hover:bg-red-100'
+          : 'hover:bg-gray-50'
+      )}
+    >
+      <span className={cn(
+        'w-2 h-2 rounded-full flex-shrink-0',
+        isEscalated ? 'bg-red-500' :
+        isWaiting ? 'bg-amber-400 animate-pulse' :
+        thread.status === 'active' ? 'bg-green-500' :
+        'bg-gray-300'
+      )} />
+      <span className={cn(
+        'flex-1 text-sm truncate min-w-0',
+        isEscalated || thread.unreadCount > 0 ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'
+      )}>
+        {thread.participantName}
       </span>
-    );
-  }
-  if (mode === 'async') {
-    return (
-      <span className="flex items-center gap-1 text-[9px] font-bold text-gray-400 uppercase tracking-wide flex-shrink-0">
-        <svg className="w-2.5 h-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        Async
-      </span>
-    );
-  }
-  return null;
+      {thread.issueTag && (
+        <span className="text-[10px] text-gray-400 truncate max-w-[90px] hidden sm:block">{thread.issueTag}</span>
+      )}
+      {badge && (
+        <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded leading-none tracking-wide flex-shrink-0', badge.classes)}>
+          {badge.label}
+        </span>
+      )}
+      {thread.slaDeadlineAt && isWaiting && (
+        <SLATimer slaDeadlineAt={thread.slaDeadlineAt} fallback="" />
+      )}
+      {thread.unreadCount > 0 && (
+        <span className={cn(
+          'min-w-[18px] h-[18px] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none flex-shrink-0',
+          isWaiting || isEscalated ? 'bg-red-500' : 'bg-blue-900'
+        )}>
+          {thread.unreadCount}
+        </span>
+      )}
+    </button>
+  );
 }
 
-export default function ThreadItem({ thread, selected, onClick }: Props) {
-  const attentionBadge = ATTENTION_BADGE[thread.status];
-  const isCall = thread.type === 'customer-call' || thread.type === 'internal-call';
+// ── Full thread row ───────────────────────────────────────────────────────────
+export default function ThreadItem({ thread, selected, onClick, compact }: Props) {
+  if (compact) return <CompactRow thread={thread} selected={selected} onClick={onClick} />;
+
+  const badge = STATE_BADGE[thread.status];
   const isUnread = thread.unreadCount > 0;
   const isWaiting = thread.status === 'waiting';
+  const isEscalated = thread.status === 'escalated';
   const isChat = thread.type === 'customer-chat' || thread.type === 'internal-chat';
 
   return (
     <button
       onClick={onClick}
       className={cn(
-        'w-full text-left px-4 py-4 border-b border-gray-100 transition-colors border-l-2',
+        'w-full text-left px-4 py-3.5 border-b border-gray-100 transition-colors border-l-2',
         selected
           ? cn('bg-blue-50', LEFT_ACCENT[thread.type])
-          : cn('hover:bg-gray-50 border-l-transparent')
+          : isEscalated
+          ? 'bg-red-50 border-l-red-500 hover:bg-red-100'
+          : 'hover:bg-gray-50 border-l-transparent'
       )}
     >
-      {/* Row 1: icon + name + mode indicator | timestamp */}
+      {/* Row 1: channel icon + name + wait time / SLA timer */}
       <div className="flex items-center justify-between gap-2 mb-1">
         <div className="flex items-center gap-1.5 min-w-0">
           <ChannelIcon type={thread.type} />
           <span className={cn(
             'text-sm leading-tight truncate',
-            isUnread ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'
+            isUnread || isEscalated ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'
           )}>
             {thread.participantName}
           </span>
-          {isChat && thread.chatMode && (
-            <ChatModeIndicator mode={thread.chatMode} />
+          {/* Live chat indicator */}
+          {isChat && thread.chatMode === 'live' && (
+            <span className="flex items-center gap-1 text-[9px] font-bold text-green-600 uppercase tracking-wide flex-shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+              Live
+            </span>
           )}
         </div>
+
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {/* Waiting threads show actionable wait age instead of clock time */}
+          {/* SLA timer or wait age for waiting threads; plain timestamp for others */}
           {isWaiting ? (
-            <span className="text-[11px] font-semibold text-amber-600">{waitAge(thread.timestamp)}</span>
+            thread.slaDeadlineAt
+              ? <SLATimer slaDeadlineAt={thread.slaDeadlineAt} fallback={waitAge(thread.timestamp)} />
+              : <span className="text-[11px] font-semibold text-amber-600">{waitAge(thread.timestamp)}</span>
           ) : (
             <span className="text-[11px] text-gray-400">{thread.timestamp}</span>
           )}
           {isUnread && (
             <span className={cn(
               'min-w-[18px] h-[18px] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none',
-              isWaiting ? 'bg-amber-500' : 'bg-blue-900'
+              isWaiting || isEscalated ? 'bg-red-500' : 'bg-blue-900'
             )}>
               {thread.unreadCount}
             </span>
@@ -150,28 +239,27 @@ export default function ThreadItem({ thread, selected, onClick }: Props) {
         </div>
       </div>
 
-      {/* Row 2: badge + case ID or role (role only when no caseId) */}
+      {/* Row 2: state badge + case ID / role */}
       <div className="flex items-center gap-1.5 mb-1">
-        {attentionBadge && (
-          <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded leading-none', attentionBadge.classes)}>
-            {attentionBadge.label}
+        {badge && (
+          <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded leading-none tracking-wide', badge.classes)}>
+            {badge.label}
           </span>
         )}
-        {/* wait age already shown in header row — omit duplicate here */}
-        {thread.caseId ? (
+        {thread.issueTag && (
+          <span className="text-[10px] text-gray-400 font-medium">{thread.issueTag}</span>
+        )}
+        {!thread.issueTag && thread.caseId && (
           <span className="text-[11px] font-mono text-gray-400">{thread.caseId}</span>
-        ) : thread.participantRole ? (
+        )}
+        {!thread.issueTag && !thread.caseId && thread.participantRole && (
           <span className="text-[11px] text-gray-400">{thread.participantRole}</span>
-        ) : null}
+        )}
       </div>
 
-      {/* Row 3: last message or call state */}
+      {/* Row 3: last message preview */}
       <div className="text-xs text-gray-500 truncate leading-tight">
-        {isCall && thread.status === 'active'
-          ? 'Active call in progress'
-          : isCall && thread.status === 'on-hold'
-          ? 'Customer on hold'
-          : thread.lastMessage}
+        {thread.lastMessage}
       </div>
     </button>
   );
