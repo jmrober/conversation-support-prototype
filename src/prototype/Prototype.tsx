@@ -406,7 +406,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   // ── Prototype state ───────────────────────────────────────────────────────
   const [threads, setThreads] = useState<Thread[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<View>('list');
+  const [, setView] = useState<View>('list');
   const [presence, setPresence] = useState<PresenceStatus>('available');
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [muted, setMuted] = useState(false);
@@ -502,10 +502,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
 
   const ringingCall = threads.find(t => t.type === 'customer-call' && t.status === 'ringing') ?? null;
 
-  const displayedThreads = threads.filter(
-    t => t.status !== 'ended' && t.status !== 'transferred' && t.type !== 'customer-call' && t.type !== 'internal-call'
-  );
-
   // All active threads (calls + chats) shown in tab bar — excludes ended/transferred/ringing
   const tabThreads = threads.filter(
     t => t.status !== 'ended' && t.status !== 'transferred' && t.status !== 'ringing'
@@ -519,7 +515,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   const effectiveSelectedId = selectedId ?? tabThreads[0]?.id ?? null;
   const selectedThread = threads.find(t => t.id === effectiveSelectedId) ?? null;
   const selectedIsCall = selectedThread?.type === 'customer-call' || selectedThread?.type === 'internal-call';
-  const showMiniCallBar = false; // replaced by tab bar navigation
 
   const consultingWithThread = selectedThread?.consultingWithThreadId
     ? (threads.find(t => t.id === selectedThread.consultingWithThreadId) ?? null)
@@ -529,15 +524,10 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     ? selectedThread
     : null;
 
-  const callRelatedChat = customerCall?.relatedChatId
-    ? (threads.find(t => t.id === customerCall.relatedChatId) ?? null)
-    : null;
-
   const selectedCallRelatedChat = selectedThread?.relatedChatId
     ? (threads.find(t => t.id === selectedThread.relatedChatId) ?? null)
     : null;
 
-  const atChatCapacity = activeChatCount >= MAX_CHATS;
   const directoryMode = anyActiveCall ? 'active-call' : directoryIntent;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -553,32 +543,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
 
   const handleRejectCall = (id: string) => {
     updateThread(id, { status: 'ended' });
-  };
-
-  const simulateInboundCall = () => {
-    if (ringingCall) return;
-    const callers = [
-      { name: 'Emma Wilson',  caseId: 'CS-4825', issueTag: 'Order Status',   sentiment: 'neutral'  as const, accountTier: 'standard' as const },
-      { name: 'James Park',   caseId: 'CS-4826', issueTag: 'Account Issue',  sentiment: 'negative' as const, accountTier: 'premium'  as const },
-      { name: 'Priya Nair',   caseId: 'CS-4827', issueTag: 'Billing Query',  sentiment: 'neutral'  as const, accountTier: 'gold'     as const },
-    ];
-    const caller = callers[Math.floor(Math.random() * callers.length)];
-    const callId = `inbound-${Date.now()}`;
-    setThreads(prev => [...prev, {
-      id: callId,
-      type: 'customer-call',
-      status: 'ringing',
-      participantName: caller.name,
-      caseId: caller.caseId,
-      issueTag: caller.issueTag,
-      sentiment: caller.sentiment,
-      accountTier: caller.accountTier,
-      lastMessage: 'Inbound call',
-      timestamp: formatTime(new Date()),
-      unreadCount: 0,
-      messages: [],
-      callDirection: 'inbound',
-    }]);
   };
 
   const handleSelectThread = (id: string) => {
@@ -600,11 +564,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     if (t && t.unreadCount > 0) {
       updateThread(id, { unreadCount: 0, status: t.status === 'unread' ? 'active' : t.status });
     }
-  };
-
-  const handleBack = () => {
-    setView('list');
-    setActivePanel(null);
   };
 
   const handlePresenceChange = (p: PresenceStatus) => {
@@ -643,12 +602,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     updateThread(selectedId, { status: t.status === 'on-hold' ? 'active' : 'on-hold' });
   };
 
-  const handleHoldToggleById = (id: string) => {
-    const t = threads.find(th => th.id === id);
-    if (!t) return;
-    updateThread(id, { status: t.status === 'on-hold' ? 'active' : 'on-hold' });
-  };
-
   const handleEndCall = () => {
     if (!selectedId) return;
     const thread = threads.find(t => t.id === selectedId);
@@ -663,24 +616,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     updateThread(selectedId, { status: 'ended' });
     setSelectedId(null);
     setView('list');
-    setWrapUpActive(true);
-    setShowWrapUpOverlay(true);
-    setPresence('wrap-up');
-    setMuted(false);
-  };
-
-  const handleEndCallById = (id: string) => {
-    const thread = threads.find(t => t.id === id);
-    if (!thread) return;
-    if (thread.consultingWithThreadId) {
-      updateThread(id, { status: 'ended' });
-      updateThread(thread.consultingWithThreadId, { status: 'active' });
-      if (selectedId === id) setSelectedId(thread.consultingWithThreadId);
-      return;
-    }
-    setWrapUpContext({ participantName: thread.participantName, issueTag: thread.issueTag });
-    updateThread(id, { status: 'ended' });
-    if (selectedId === id) { setSelectedId(null); setView('list'); }
     setWrapUpActive(true);
     setShowWrapUpOverlay(true);
     setPresence('wrap-up');
@@ -721,28 +656,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
       setSelectedId(prev => (prev === customerThreadId ? null : prev));
       setView('list');
     }, 2000);
-  };
-
-  const handleChatTransferToAgent = (entry: DirectoryEntry) => {
-    if (!selectedId) return;
-    updateThread(selectedId, { status: 'transferring', lastMessage: `Transferring to ${entry.name}` });
-    setActivePanel(null);
-    setTimeout(() => {
-      setThreads(prev => prev.map(t => t.id === selectedId ? { ...t, status: 'transferred' } : t));
-      setSelectedId(null);
-      setView('list');
-    }, 1800);
-  };
-
-  const handleChatTransferToQueue = (queueName: string) => {
-    if (!selectedId) return;
-    updateThread(selectedId, { status: 'transferring', lastMessage: `Transferring to ${queueName}` });
-    setActivePanel(null);
-    setTimeout(() => {
-      setThreads(prev => prev.map(t => t.id === selectedId ? { ...t, status: 'transferred' } : t));
-      setSelectedId(null);
-      setView('list');
-    }, 1800);
   };
 
   const handleEndChat = () => {
@@ -914,7 +827,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
                 : undefined}
               relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
               onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
-              transferSuggestion={selectedIsCall ? selectedThread?.transferSuggestion : undefined}
             />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
@@ -1053,7 +965,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               : undefined}
             relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
             onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
-            transferSuggestion={selectedIsCall ? selectedThread?.transferSuggestion : undefined}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">

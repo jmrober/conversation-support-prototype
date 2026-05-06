@@ -26,7 +26,6 @@ interface Props {
   onEndChat?: () => void;
   relatedChat?: Thread | null;
   onSwitchToChat?: () => void;
-  transferSuggestion?: string;
 }
 
 // ── Summary generation ────────────────────────────────────────────────────────
@@ -118,7 +117,6 @@ export default function ConversationPanel({
   consultingWithThread,
   composerText,
   muted,
-  onBack,
   onComposerChange,
   onSendMessage,
   onHoldToggle,
@@ -126,13 +124,11 @@ export default function ConversationPanel({
   onEndCall,
   onWarmTransfer,
   onOpenDirectory,
-  onOpenResponseAssist,
   onOpenChatTransfer,
   onStartCall,
   onEndChat,
   relatedChat,
   onSwitchToChat,
-  transferSuggestion,
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -419,7 +415,6 @@ export default function ConversationPanel({
           onOpenDirectory={onOpenDirectory}
           relatedChat={relatedChat}
           onSwitchToChat={onSwitchToChat}
-          transferSuggestion={transferSuggestion}
         />
       ) : isChat ? (
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">

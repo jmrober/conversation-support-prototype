@@ -448,7 +448,7 @@ function ChatComposerDemo() {
           ))}
         </div>
       )}
-      <ChatComposer value={value} onChange={setValue} onSend={handleSend} onAISuggest={() => {}} onQuickReplies={() => {}} onShareCart={() => {}} recipientName="Sarah Chen" />
+      <ChatComposer value={value} onChange={setValue} onSend={handleSend} onAISuggest={() => {}} recipientName="Sarah Chen" />
       <div className="px-4 py-2 text-xs text-gray-400" style={mono}>Type and press Enter or Send</div>
     </RailBox>
   );

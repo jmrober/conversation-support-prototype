@@ -33,7 +33,6 @@ interface Props {
   onOpenDirectory: () => void;
   relatedChat?: Thread | null;
   onSwitchToChat?: () => void;
-  transferSuggestion?: string;
 }
 
 // Mock transcript lines keyed by thread type/direction
@@ -59,7 +58,6 @@ export default function CallControls({
   onOpenDirectory,
   relatedChat,
   onSwitchToChat,
-  transferSuggestion,
 }: Props) {
   const [detailTab, setDetailTab] = useState<'details' | 'transcript'>('details');
   const [copiedTaskId, setCopiedTaskId] = useState(false);
@@ -72,7 +70,6 @@ export default function CallControls({
   };
 
   const isOnHold = thread.status === 'on-hold';
-  const isActive = thread.status === 'active';
   const isConsult = thread.type === 'internal-call' && !!thread.consultingWithThreadId;
 
   // ── Transferring state ──────────────────────────────────────────────────────

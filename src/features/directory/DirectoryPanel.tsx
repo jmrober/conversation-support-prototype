@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { DirectoryEntry, QueueEntry, Thread } from '../../types';
+import type { DirectoryEntry, Thread } from '../../types';
 import { cn } from '../../utils/cn';
 
 interface Props {
