@@ -53,6 +53,7 @@ export function getRetailEscalationFlow(): ScenarioFlow {
     status: 'active' as const,
     participantName: 'Jamie Ruiz',
     participantRole: 'Floor Associate · Store #118',
+    teamName: 'Store Support',
     lastMessage: associateMsg1.text,
     timestamp: '2:08',
     unreadCount: 0,

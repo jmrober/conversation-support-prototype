@@ -66,11 +66,27 @@ export interface Thread {
   relatedChatId?: string;       // for calls: which chat spawned this call
   transferSuggestion?: string;  // suggested queue name for intelligent transfer
   hasProfile?: boolean;         // whether this chat has a customer profile attached
+  teamName?: string;            // for internal chats: the team or queue being contacted
+  queue?: string;               // for customer chats: the queue the contact arrived through
+  entryUrl?: string;            // for customer chats: the page the customer was on when they started
+  source?: string;              // e.g. "Web", "Mobile App", "WhatsApp"
+  entryPoint?: string;          // section/page of the site e.g. "Product Page"
+  storeAddress?: string;
+  storeNumber?: string;
+  chatId?: string;
+  taskId?: string;
   chatbotSummary?: {
     botName: string;
     handoffReason: string;
     summary: string;
     dataPoints: Array<{ label: string; value: string }>;
+  };
+  transferSummary?: {
+    fromAgent: string;
+    fromAgentRole?: string;
+    transferReason: string;
+    summary: string;
+    dataPoints?: Array<{ label: string; value: string }>;
   };
 }
 

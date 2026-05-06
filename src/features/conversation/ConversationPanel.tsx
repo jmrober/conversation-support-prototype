@@ -239,14 +239,41 @@ export default function ConversationPanel({
       <div className="px-4 py-4 border-b border-gray-200 flex-shrink-0 bg-white">
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[15px] font-semibold text-gray-900 leading-tight truncate">
-                {thread.participantName}
-              </span>
-              {thread.participantRole && (
-                <span className="text-xs text-gray-400 flex-shrink-0">{thread.participantRole}</span>
-              )}
-            </div>
+            {thread.type === 'internal-chat' && thread.teamName ? (
+              <>
+                <span className="text-[15px] font-semibold text-gray-900 leading-tight truncate block">
+                  {thread.teamName}
+                </span>
+                <span className="text-xs text-gray-400 leading-tight">
+                  Queue: {thread.teamName}
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[15px] font-semibold text-gray-900 leading-tight truncate">
+                    {thread.participantName}
+                  </span>
+                  {thread.participantRole && (
+                    <span className="text-xs text-gray-400 flex-shrink-0">{thread.participantRole}</span>
+                  )}
+                </div>
+                {(thread.queue || thread.entryUrl) && (
+                  <div className="flex flex-col gap-0.5">
+                    {thread.queue && (
+                      <span className="text-xs text-gray-400 leading-tight">
+                        <span className="font-medium text-gray-500">Queue:</span> {thread.queue}
+                      </span>
+                    )}
+                    {thread.entryUrl && (
+                      <span className="text-xs text-gray-400 leading-tight truncate">
+                        <span className="font-medium text-gray-500">Entry URL:</span> {thread.entryUrl}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
           {thread.caseId && (
             <span className="text-[11px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0">
@@ -428,30 +455,74 @@ export default function ConversationPanel({
               </div>
             )}
 
+            {/* Agent transfer summary */}
+            {thread.transferSummary && (
+              <div className="mx-4 mt-4 mb-1 rounded-xl border border-gray-200 bg-gray-50 overflow-hidden flex-shrink-0">
+                <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-200">
+                  <div className="w-6 h-6 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-bold text-gray-700 leading-tight">
+                      Transferred from {thread.transferSummary.fromAgent}
+                      {thread.transferSummary.fromAgentRole && (
+                        <span className="font-normal text-gray-500"> · {thread.transferSummary.fromAgentRole}</span>
+                      )}
+                    </p>
+                    <p className="text-[10px] text-gray-400 leading-tight">Reason: {thread.transferSummary.transferReason}</p>
+                  </div>
+                </div>
+                <div className="px-3 py-2.5 space-y-2.5">
+                  <p className="text-[11px] text-gray-700 leading-relaxed">{thread.transferSummary.summary}</p>
+                  {thread.transferSummary.dataPoints && (
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                      {thread.transferSummary.dataPoints.map(({ label, value }) => (
+                        <div key={label}>
+                          <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider leading-none mb-0.5">{label}</p>
+                          <p className="text-[11px] font-medium text-gray-700 leading-tight">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Live conversation divider — after transfer summary */}
+            {thread.transferSummary && !thread.chatbotSummary && thread.messages.length > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider flex-shrink-0">Live conversation</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+            )}
+
             {/* Chatbot handoff summary */}
             {thread.chatbotSummary && (
-              <div className="mx-4 mt-4 mb-1 rounded-xl border border-indigo-100 bg-indigo-50 overflow-hidden flex-shrink-0">
+              <div className="mx-4 mt-4 mb-1 rounded-xl border border-gray-200 bg-gray-50 overflow-hidden flex-shrink-0">
                 {/* Header */}
-                <div className="flex items-center gap-2 px-3 py-2.5 border-b border-indigo-100">
-                  <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-200">
+                  <div className="w-6 h-6 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
                     <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-bold text-indigo-800 leading-tight">{thread.chatbotSummary.botName} · Virtual Assistant</p>
-                    <p className="text-[10px] text-indigo-500 leading-tight">Handoff: {thread.chatbotSummary.handoffReason}</p>
+                    <p className="text-[11px] font-bold text-gray-700 leading-tight">{thread.chatbotSummary.botName} · Virtual Assistant</p>
+                    <p className="text-[10px] text-gray-400 leading-tight">Handoff: {thread.chatbotSummary.handoffReason}</p>
                   </div>
                 </div>
                 {/* Summary */}
                 <div className="px-3 py-2.5 space-y-2.5">
-                  <p className="text-[11px] text-indigo-900 leading-relaxed">{thread.chatbotSummary.summary}</p>
+                  <p className="text-[11px] text-gray-700 leading-relaxed">{thread.chatbotSummary.summary}</p>
                   {/* Data points */}
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
                     {thread.chatbotSummary.dataPoints.map(({ label, value }) => (
                       <div key={label}>
-                        <p className="text-[9px] font-semibold text-indigo-400 uppercase tracking-wider leading-none mb-0.5">{label}</p>
-                        <p className={cn('text-[11px] font-medium leading-tight', value === 'Unresolved' ? 'text-amber-600' : 'text-indigo-900')}>{value}</p>
+                        <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider leading-none mb-0.5">{label}</p>
+                        <p className="text-[11px] font-medium text-gray-700 leading-tight">{value}</p>
                       </div>
                     ))}
                   </div>

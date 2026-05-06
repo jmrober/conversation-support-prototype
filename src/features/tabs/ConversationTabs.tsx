@@ -100,6 +100,14 @@ function ChatIcon({ className }: { className?: string }) {
   );
 }
 
+function InternalChatIcon({ className }: { className?: string }) {
+  return (
+    <svg className={cn('w-3 h-3 flex-shrink-0', className)} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
 // ── Active conversation tab ───────────────────────────────────────────────────
 function ConversationTab({
   thread,
@@ -141,6 +149,8 @@ function ConversationTab({
       <div className="flex items-center gap-1 mb-1 w-full">
         {isCall
           ? <PhoneIcon className={selected ? 'text-blue-900' : 'text-gray-400'} />
+          : isInternal
+          ? <InternalChatIcon className={selected ? 'text-slate-500' : 'text-gray-400'} />
           : <ChatIcon className={selected ? 'text-blue-500' : isUnread ? 'text-blue-400' : 'text-gray-400'} />
         }
         <span className={cn(

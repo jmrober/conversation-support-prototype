@@ -53,6 +53,7 @@ export function getRecyclingRequestFlow(): ScenarioFlow {
     status: 'active' as const,
     participantName: 'Alex Thompson',
     participantRole: 'Store Manager · Store #442',
+    teamName: 'Operations Support',
     lastMessage: managerMsg1.text,
     timestamp: '10:14',
     unreadCount: 0,
