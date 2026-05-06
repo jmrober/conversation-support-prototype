@@ -54,38 +54,11 @@ export default function PresenceControl({ presence, onChange, wrapUpSecondsLeft,
           isWrapUp ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-200'
         )}
       >
-        {/* Agent identity */}
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <div className="relative flex-shrink-0">
-            <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
-              JR
-            </div>
-            {/* Availability dot on avatar */}
-            <span
-              className={cn(
-                'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white',
-                DOT[presence],
-                isWrapUp && 'animate-pulse'
-              )}
-            />
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-gray-800 leading-tight truncate">
-              Jordan Riley
-            </div>
-            {isWrapUp && (
-              <div className="text-[10px] text-yellow-700 font-medium leading-tight">
-                Not accepting new contacts
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Status button */}
         <button
           onClick={() => setOpen((o) => !o)}
           className={cn(
-            'flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded transition-colors flex-shrink-0',
+            'flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded transition-colors flex-1',
             isWrapUp
               ? 'bg-yellow-50 text-yellow-800 hover:bg-yellow-100'
               : 'hover:bg-gray-100 text-gray-600'
@@ -122,7 +95,7 @@ export default function PresenceControl({ presence, onChange, wrapUpSecondsLeft,
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-2 top-11 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-44">
+          <div className="absolute left-2 top-full mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-44">
             {isWrapUp && (
               <div className="px-3 py-2 border-b border-gray-100 mb-1">
                 <p className="text-[10px] text-gray-400 leading-snug">

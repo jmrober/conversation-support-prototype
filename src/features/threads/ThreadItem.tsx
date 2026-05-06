@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Thread, ThreadStatus, ThreadType } from '../../types';
 import { cn } from '../../utils/cn';
 
@@ -180,6 +180,23 @@ function CompactRow({ thread, selected, onClick }: Props) {
 
 // ── Full thread row ───────────────────────────────────────────────────────────
 export default function ThreadItem({ thread, selected, onClick, compact }: Props) {
+  const prevUnread = useRef(thread.unreadCount);
+  const [isFlashing, setIsFlashing] = useState(false);
+
+  useEffect(() => {
+    if (thread.unreadCount > prevUnread.current) {
+      // Restart the animation by toggling the class off and back on
+      setIsFlashing(false);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setIsFlashing(true));
+      });
+      const t = setTimeout(() => setIsFlashing(false), 1400);
+      prevUnread.current = thread.unreadCount;
+      return () => clearTimeout(t);
+    }
+    prevUnread.current = thread.unreadCount;
+  }, [thread.unreadCount]);
+
   if (compact) return <CompactRow thread={thread} selected={selected} onClick={onClick} />;
 
   const badge = STATE_BADGE[thread.status];
@@ -192,12 +209,14 @@ export default function ThreadItem({ thread, selected, onClick, compact }: Props
     <button
       onClick={onClick}
       className={cn(
-        'w-full text-left px-4 py-3.5 border-b border-gray-100 transition-colors border-l-2',
+        'w-full text-left px-4 py-3.5 border-b border-gray-100 border-l-2',
         selected
           ? cn('bg-blue-50', LEFT_ACCENT[thread.type])
           : isEscalated
           ? 'bg-red-50 border-l-red-500 hover:bg-red-100'
-          : 'hover:bg-gray-50 border-l-transparent'
+          : isFlashing
+          ? 'animate-thread-flash'
+          : 'hover:bg-gray-50 border-l-transparent transition-colors'
       )}
     >
       {/* Row 1: channel icon + name + wait time / SLA timer */}

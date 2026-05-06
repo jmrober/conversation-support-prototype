@@ -1,4 +1,4 @@
-import { useState, useEffect, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, type CSSProperties } from 'react';
 import type { Thread, PresenceStatus, PanelType, DirectoryEntry } from '../types';
 import { getFlow, type ScenarioFlow } from '../scenarios';
 import { useWrapUpTimer } from '../hooks/useWrapUpTimer';
@@ -351,6 +351,42 @@ function TransferAnnotationPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ── New message toast ─────────────────────────────────────────────────────────
+
+function NewMessageToast({ name, preview, onView, onDismiss }: {
+  name: string;
+  preview: string;
+  onView: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="absolute bottom-4 left-3 right-3 z-50 animate-toast-enter">
+      <div className="bg-gray-900 rounded-xl px-3.5 py-3 flex items-center gap-3 shadow-2xl">
+        <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+          <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-[11px] font-bold text-white block leading-tight">{name}</span>
+          <span className="text-[11px] text-gray-400 block truncate leading-tight mt-0.5">{preview}</span>
+        </div>
+        <button
+          onClick={onView}
+          className="flex-shrink-0 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-lg transition-colors"
+        >
+          View
+        </button>
+        <button onClick={onDismiss} className="text-gray-600 hover:text-gray-400 flex-shrink-0 transition-colors">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatTime(d: Date) {
@@ -382,6 +418,9 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   const [railExpanded, setRailExpanded] = useState(false);
   const [assistTab, setAssistTab] = useState<'suggested' | 'library'>('suggested');
   const [presentationMode, setPresentationMode] = useState(false);
+  const [toastThread, setToastThread] = useState<{ id: string; name: string; preview: string } | null>(null);
+  const prevUnreadsRef = useRef<Record<string, number>>({});
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset step when flow changes, load first step's threads
   useEffect(() => {
@@ -393,10 +432,15 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     const step = flow?.steps[stepIndex];
     if (step) {
       setThreads(step.threads);
-      setSelectedId(step.initialSelectedId ?? null);
+      const initialSelected = step.initialSelectedId ?? null;
+      setSelectedId(initialSelected);
       setView(step.initialView ?? 'list');
       setActivePanel(null);
       setMuted(false);
+      setToastThread(null);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      // Reset unread tracking so we don't false-fire on step load
+      prevUnreadsRef.current = Object.fromEntries(step.threads.map(t => [t.id, t.unreadCount]));
       if (step.initialWrapUpActive) {
         setWrapUpActive(true);
         setShowWrapUpOverlay(true);
@@ -407,8 +451,34 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
         setShowWrapUpOverlay(false);
         setWrapUpContext(null);
       }
+      // Show toast for any thread that starts with unread messages and isn't the selected one
+      const effectiveSelected = initialSelected ?? step.threads[0]?.id ?? null;
+      const unreadThread = step.threads.find(t => t.unreadCount > 0 && t.id !== effectiveSelected);
+      if (unreadThread) {
+        toastTimerRef.current = setTimeout(() => {
+          setToastThread({ id: unreadThread.id, name: unreadThread.participantName, preview: unreadThread.lastMessage });
+        }, 900);
+      }
     }
   }, [stepIndex, flowId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Detect real-time unread increases on non-selected threads
+  useEffect(() => {
+    threads.forEach(t => {
+      const prev = prevUnreadsRef.current[t.id];
+      if (prev !== undefined && t.id !== effectiveSelectedId && t.unreadCount > prev) {
+        setToastThread({ id: t.id, name: t.participantName, preview: t.lastMessage });
+      }
+      prevUnreadsRef.current[t.id] = t.unreadCount;
+    });
+  }, [threads]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-dismiss toast after 5s
+  useEffect(() => {
+    if (!toastThread) return;
+    const id = setTimeout(() => setToastThread(null), 5000);
+    return () => clearTimeout(id);
+  }, [toastThread]);
 
   const handleWrapUpEnd = () => {
     setWrapUpActive(false);
@@ -436,13 +506,20 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     t => t.status !== 'ended' && t.status !== 'transferred' && t.type !== 'customer-call' && t.type !== 'internal-call'
   );
 
+  // All active threads (calls + chats) shown in tab bar — excludes ended/transferred/ringing
+  const tabThreads = threads.filter(
+    t => t.status !== 'ended' && t.status !== 'transferred' && t.status !== 'ringing'
+  );
+
   const activeChatCount = threads.filter(
     t => t.type === 'customer-chat' && t.status !== 'ended' && t.status !== 'transferred'
   ).length;
 
-  const selectedThread = threads.find(t => t.id === selectedId) ?? null;
+  // Auto-select highest-priority tab when nothing is explicitly selected
+  const effectiveSelectedId = selectedId ?? tabThreads[0]?.id ?? null;
+  const selectedThread = threads.find(t => t.id === effectiveSelectedId) ?? null;
   const selectedIsCall = selectedThread?.type === 'customer-call' || selectedThread?.type === 'internal-call';
-  const showMiniCallBar = anyActiveCall !== null && view === 'detail' && !selectedIsCall;
+  const showMiniCallBar = false; // replaced by tab bar navigation
 
   const consultingWithThread = selectedThread?.consultingWithThreadId
     ? (threads.find(t => t.id === selectedThread.consultingWithThreadId) ?? null)
@@ -505,6 +582,16 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   };
 
   const handleSelectThread = (id: string) => {
+    const leaving = threads.find(th => th.id === effectiveSelectedId);
+    const arriving = threads.find(th => th.id === id);
+    const isCall = (t?: typeof leaving) => t?.type === 'customer-call' || t?.type === 'internal-call';
+
+    if (isCall(leaving) && !isCall(arriving)) {
+      setMuted(true);   // leaving a call → mute so customer can't hear chat activity
+    } else if (isCall(arriving)) {
+      setMuted(false);  // returning to a call → unmute
+    }
+
     setSelectedId(id);
     setView('detail');
     setActivePanel(null);
@@ -804,59 +891,53 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             </div>
           )}
 
-          {view === 'list' ? (
-            <>
-              {(customerCall || consultCall) && (
-                <SLOTS.CallSection
-                  customerCall={customerCall} consultCall={consultCall} muted={muted}
-                  onMuteToggle={() => setMuted(m => !m)} onHoldToggle={handleHoldToggleById}
-                  onEndCall={handleEndCallById} onWarmTransfer={handleWarmTransfer}
-                  onOpenDirectory={() => setActivePanel('directory')} onSelectCall={handleSelectThread}
-                  relatedChat={callRelatedChat} onSwitchToChat={id => handleSelectThread(id)}
-                />
-              )}
-              <SLOTS.ThreadList
-                threads={displayedThreads} selectedId={selectedId} onSelect={handleSelectThread}
-                onNewCall={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
-                onNewInternalChat={() => { setDirectoryIntent('internal-chat'); setActivePanel('directory'); }}
-                onSimulateInbound={simulateInboundCall} wrapUpActive={wrapUpActive}
-                atChatCapacity={atChatCapacity} callActive={anyActiveCall !== null}
-              />
-            </>
-          ) : selectedThread ? (
-            <>
-              {showMiniCallBar && (
-                <SLOTS.MiniCallBar
-                  customerCall={customerCall} consultCall={consultCall} muted={muted}
-                  onMuteToggle={() => setMuted(m => !m)} onHoldToggle={handleHoldToggleById}
-                  onEndCall={handleEndCallById} onSelectCall={handleSelectThread}
-                />
-              )}
-              <SLOTS.ConversationPanel
-                thread={selectedThread} consultingWithThread={consultingWithThread}
-                composerText={composerText} muted={muted} onBack={handleBack}
-                onComposerChange={setComposerText} onSendMessage={handleSendMessage}
-                onHoldToggle={handleHoldToggle} onMuteToggle={() => setMuted(m => !m)}
-                onEndCall={handleEndCall} onWarmTransfer={handleWarmTransfer}
-                onOpenDirectory={() => setActivePanel('directory')}
-                onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
-                onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
-                onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
-                onStartCall={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat')
-                  ? () => handleOutboundCall({ id: selectedThread.id, name: selectedThread.participantName, role: selectedThread.participantRole ?? '', department: '', extension: '', available: true, initials: '' })
-                  : undefined}
-                relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
-                onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
-                transferSuggestion={selectedIsCall ? selectedThread?.transferSuggestion : undefined}
-              />
-            </>
-          ) : (
-            <SLOTS.ThreadList
-              threads={displayedThreads} selectedId={null} onSelect={handleSelectThread}
-              onNewCall={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
-              onNewInternalChat={() => { setDirectoryIntent('internal-chat'); setActivePanel('directory'); }}
-              onSimulateInbound={simulateInboundCall} callActive={anyActiveCall !== null}
+          <SLOTS.ConversationTabs
+            threads={tabThreads}
+            selectedId={effectiveSelectedId}
+            muted={muted}
+            onSelect={handleSelectThread}
+            onNewConversation={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
+          />
+          {selectedThread ? (
+            <SLOTS.ConversationPanel
+              thread={selectedThread} consultingWithThread={consultingWithThread}
+              composerText={composerText} muted={muted}
+              onComposerChange={setComposerText} onSendMessage={handleSendMessage}
+              onHoldToggle={handleHoldToggle} onMuteToggle={() => setMuted(m => !m)}
+              onEndCall={handleEndCall} onWarmTransfer={handleWarmTransfer}
+              onOpenDirectory={() => setActivePanel('directory')}
+              onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
+              onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
+              onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
+              onStartCall={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat')
+                ? () => handleOutboundCall({ id: selectedThread.id, name: selectedThread.participantName, role: selectedThread.participantRole ?? '', department: '', extension: '', available: true, initials: '' })
+                : undefined}
+              relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
+              onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
+              transferSuggestion={selectedIsCall ? selectedThread?.transferSuggestion : undefined}
             />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">No active conversations</p>
+                <p className="text-xs text-gray-400 mt-0.5">Waiting for an inbound contact, or make an outbound call.</p>
+              </div>
+              <button
+                onClick={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
+                disabled={wrapUpActive}
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-700 rounded-xl hover:bg-blue-800 disabled:opacity-40 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
+                </svg>
+                Outbound Call
+              </button>
+            </div>
           )}
 
           {showWrapUpOverlay && (
@@ -883,6 +964,14 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               thread={selectedThread} initialTab={assistTab}
               onInsert={text => { setComposerText(text); setActivePanel(null); }}
               onClose={() => setActivePanel(null)}
+            />
+          )}
+          {toastThread && (
+            <NewMessageToast
+              name={toastThread.name}
+              preview={toastThread.preview}
+              onView={() => { handleSelectThread(toastThread.id); setToastThread(null); }}
+              onDismiss={() => setToastThread(null)}
             />
           )}
         </div>
@@ -936,83 +1025,58 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
           </div>
         )}
 
-        {/* Main view */}
-        {view === 'list' ? (
-          <>
-            {(customerCall || consultCall) && (
-              <SLOTS.CallSection
-                customerCall={customerCall}
-                consultCall={consultCall}
-                muted={muted}
-                onMuteToggle={() => setMuted(m => !m)}
-                onHoldToggle={handleHoldToggleById}
-                onEndCall={handleEndCallById}
-                onWarmTransfer={handleWarmTransfer}
-                onOpenDirectory={() => setActivePanel('directory')}
-                onSelectCall={handleSelectThread}
-                relatedChat={callRelatedChat}
-                onSwitchToChat={id => handleSelectThread(id)}
-              />
-            )}
-            <SLOTS.ThreadList
-              threads={displayedThreads}
-              selectedId={selectedId}
-              onSelect={handleSelectThread}
-              onNewCall={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
-              onNewInternalChat={() => { setDirectoryIntent('internal-chat'); setActivePanel('directory'); }}
-              onSimulateInbound={simulateInboundCall}
-              wrapUpActive={wrapUpActive}
-              atChatCapacity={atChatCapacity}
-              callActive={anyActiveCall !== null}
-            />
-          </>
-        ) : selectedThread ? (
-          <>
-            {showMiniCallBar && (
-              <SLOTS.MiniCallBar
-                customerCall={customerCall}
-                consultCall={consultCall}
-                muted={muted}
-                onMuteToggle={() => setMuted(m => !m)}
-                onHoldToggle={handleHoldToggleById}
-                onEndCall={handleEndCallById}
-                onSelectCall={handleSelectThread}
-              />
-            )}
-            <SLOTS.ConversationPanel
-              thread={selectedThread}
-              consultingWithThread={consultingWithThread}
-              composerText={composerText}
-              muted={muted}
-              onBack={handleBack}
-              onComposerChange={setComposerText}
-              onSendMessage={handleSendMessage}
-              onHoldToggle={handleHoldToggle}
-              onMuteToggle={() => setMuted(m => !m)}
-              onEndCall={handleEndCall}
-              onWarmTransfer={handleWarmTransfer}
-              onOpenDirectory={() => setActivePanel('directory')}
-              onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
-              onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
-              onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
-              onStartCall={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat')
-                ? () => handleOutboundCall({ id: selectedThread.id, name: selectedThread.participantName, role: selectedThread.participantRole ?? '', department: '', extension: '', available: true, initials: '' })
-                : undefined}
-              relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
-              onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
-              transferSuggestion={selectedIsCall ? selectedThread?.transferSuggestion : undefined}
-            />
-          </>
-        ) : (
-          <SLOTS.ThreadList
-            threads={displayedThreads}
-            selectedId={null}
-            onSelect={handleSelectThread}
-            onNewCall={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
-            onNewInternalChat={() => { setDirectoryIntent('internal-chat'); setActivePanel('directory'); }}
-            onSimulateInbound={simulateInboundCall}
-            callActive={anyActiveCall !== null}
+        {/* Main view — tab bar always visible, content pane below */}
+        <SLOTS.ConversationTabs
+          threads={tabThreads}
+          selectedId={effectiveSelectedId}
+          onSelect={handleSelectThread}
+          onNewConversation={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
+        />
+        {selectedThread ? (
+          <SLOTS.ConversationPanel
+            thread={selectedThread}
+            consultingWithThread={consultingWithThread}
+            composerText={composerText}
+            muted={muted}
+            onComposerChange={setComposerText}
+            onSendMessage={handleSendMessage}
+            onHoldToggle={handleHoldToggle}
+            onMuteToggle={() => setMuted(m => !m)}
+            onEndCall={handleEndCall}
+            onWarmTransfer={handleWarmTransfer}
+            onOpenDirectory={() => setActivePanel('directory')}
+            onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
+            onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
+            onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
+            onStartCall={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat')
+              ? () => handleOutboundCall({ id: selectedThread.id, name: selectedThread.participantName, role: selectedThread.participantRole ?? '', department: '', extension: '', available: true, initials: '' })
+              : undefined}
+            relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
+            onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
+            transferSuggestion={selectedIsCall ? selectedThread?.transferSuggestion : undefined}
           />
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">No active conversations</p>
+              <p className="text-xs text-gray-400 mt-0.5">Waiting for an inbound contact, or make an outbound call.</p>
+            </div>
+            <button
+              onClick={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
+              disabled={wrapUpActive}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-700 rounded-xl hover:bg-blue-800 disabled:opacity-40 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
+              </svg>
+              Outbound Call
+            </button>
+          </div>
         )}
 
         {/* Wrap-up overlay */}
@@ -1057,6 +1121,14 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             initialTab={assistTab}
             onInsert={text => { setComposerText(text); setActivePanel(null); }}
             onClose={() => setActivePanel(null)}
+          />
+        )}
+        {toastThread && (
+          <NewMessageToast
+            name={toastThread.name}
+            preview={toastThread.preview}
+            onView={() => { handleSelectThread(toastThread.id); setToastThread(null); }}
+            onDismiss={() => setToastThread(null)}
           />
         )}
       </div>

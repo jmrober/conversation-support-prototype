@@ -2,6 +2,7 @@
 import PresenceControl from '../features/presence/PresenceControl';
 import ThreadList from '../features/threads/ThreadList';
 import ConversationPanel from '../features/conversation/ConversationPanel';
+import ConversationTabs from '../features/tabs/ConversationTabs';
 import CallSection from '../features/call/CallSection';
 import WrapUpTimer from '../features/call/WrapUpTimer';
 import InboundCallAlert from '../features/call/InboundCallAlert';
@@ -13,6 +14,7 @@ export const SLOTS = {
   PresenceControl,
   ThreadList,
   ConversationPanel,
+  ConversationTabs,
   CallSection,
   WrapUpTimer,
   InboundCallAlert,

@@ -5,3 +5,40 @@ body { margin: 0; padding: 0; font-family: ui-sans-serif, system-ui, sans-serif;
 #root { height: 100%; }
 body.prototype-active { height: 100vh; overflow: hidden; }
 body.prototype-active #root { height: 100vh; }
+
+/* New conversation tab — slides up and fades in on mount */
+@keyframes tab-enter {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-tab-enter {
+  animation: tab-enter 0.22s ease-out forwards;
+}
+
+/* Unread tab top border — pulses to draw attention */
+@keyframes border-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+.animate-border-pulse {
+  animation: border-pulse 1.2s ease-in-out infinite;
+}
+
+/* New message toast — slides up and fades in */
+@keyframes toast-enter {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-toast-enter {
+  animation: toast-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Incoming chat flash — brief blue wash that fades out */
+@keyframes thread-flash {
+  0%   { background-color: rgb(219 234 254); border-left-color: rgb(59 130 246); } /* blue-100, blue-500 */
+  60%  { background-color: rgb(239 246 255); border-left-color: rgb(147 197 253); } /* blue-50, blue-300 */
+  100% { background-color: transparent;     border-left-color: transparent; }
+}
+.animate-thread-flash {
+  animation: thread-flash 1.4s ease-out forwards;
+}

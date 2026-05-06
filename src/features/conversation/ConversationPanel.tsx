@@ -4,15 +4,15 @@ import { cn } from '../../utils/cn';
 import MessageBubble from './MessageBubble';
 import ChatComposer from './ChatComposer';
 import CallControls from '../call/CallControls';
-import ContextStrip from './ContextStrip';
 import ShareCartPanel from './ShareCartPanel';
+import ContextStrip from './ContextStrip';
 
 interface Props {
   thread: Thread;
   consultingWithThread: Thread | null;
   composerText: string;
   muted: boolean;
-  onBack: () => void;
+  onBack?: () => void;
   onComposerChange: (v: string) => void;
   onSendMessage: () => void;
   onHoldToggle: () => void;
@@ -28,13 +28,6 @@ interface Props {
   onSwitchToChat?: () => void;
   transferSuggestion?: string;
 }
-
-const CHANNEL_EYEBROW: Record<string, { label: string; labelClass: string }> = {
-  'customer-chat': { label: 'Customer · Chat', labelClass: 'text-blue-700' },
-  'internal-chat': { label: 'Internal · Chat', labelClass: 'text-slate-600' },
-  'customer-call': { label: 'Customer · Call', labelClass: 'text-blue-900' },
-  'internal-call': { label: 'Internal · Call', labelClass: 'text-slate-700' },
-};
 
 // ── Summary generation ────────────────────────────────────────────────────────
 function generateSummary(messages: Message[], participantName: string): string {
@@ -161,6 +154,9 @@ export default function ConversationPanel({
   // Share cart panel
   const [shareCartOpen, setShareCartOpen] = useState(false);
 
+  // Chat details panel
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
   // 3-dot menu
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -188,6 +184,7 @@ export default function ConversationPanel({
     setEndChatConfirm(false);
     setSentimentDismissed(false);
     setShareCartOpen(false);
+    setDetailsOpen(false);
   }, [thread.id]);
 
   const handleSummarise = () => {
@@ -227,7 +224,6 @@ export default function ConversationPanel({
 
   const isCall = thread.type === 'customer-call' || thread.type === 'internal-call';
   const isChat = thread.type === 'customer-chat' || thread.type === 'internal-chat';
-  const eyebrow = CHANNEL_EYEBROW[thread.type];
 
   const TONES: { key: Tone; label: string }[] = [
     { key: 'balanced', label: 'Balanced' },
@@ -242,18 +238,7 @@ export default function ConversationPanel({
       {/* Conversation header */}
       <div className="px-4 py-4 border-b border-gray-200 flex-shrink-0 bg-white">
         <div className="flex items-center gap-2">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors flex-shrink-0"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
           <div className="flex-1 min-w-0">
-            <div className={cn('text-[10px] font-semibold tracking-widest uppercase leading-none mb-0.5', eyebrow.labelClass)}>
-              {eyebrow.label}
-            </div>
             <div className="flex items-center gap-2">
               <span className="text-[15px] font-semibold text-gray-900 leading-tight truncate">
                 {thread.participantName}
@@ -293,6 +278,19 @@ export default function ConversationPanel({
 
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-20">
+                  {/* Details */}
+                  <button
+                    onClick={() => { setDetailsOpen(o => !o); closeMenu(); }}
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-50 transition-colors text-left',
+                      detailsOpen ? 'text-blue-600 font-semibold' : 'text-gray-700'
+                    )}
+                  >
+                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {detailsOpen ? 'Hide Details' : 'Details'}
+                  </button>
                   {/* Summarize */}
                   {thread.messages.length > 0 && summaryState === 'idle' && (
                     <button
@@ -348,9 +346,9 @@ export default function ConversationPanel({
         </div>
       </div>
 
-      {/* Context strip — customer identity, issue, sentiment */}
-      {(thread.type === 'customer-chat' || thread.type === 'customer-call') && (
-        <ContextStrip thread={thread} />
+      {/* Chat details panel — toggled from header */}
+      {isChat && detailsOpen && (
+        <ContextStrip thread={thread} forceExpanded />
       )}
 
       {/* Summary — slim strip below header */}
@@ -427,6 +425,46 @@ export default function ConversationPanel({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
+              </div>
+            )}
+
+            {/* Chatbot handoff summary */}
+            {thread.chatbotSummary && (
+              <div className="mx-4 mt-4 mb-1 rounded-xl border border-indigo-100 bg-indigo-50 overflow-hidden flex-shrink-0">
+                {/* Header */}
+                <div className="flex items-center gap-2 px-3 py-2.5 border-b border-indigo-100">
+                  <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h16a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-bold text-indigo-800 leading-tight">{thread.chatbotSummary.botName} · Virtual Assistant</p>
+                    <p className="text-[10px] text-indigo-500 leading-tight">Handoff: {thread.chatbotSummary.handoffReason}</p>
+                  </div>
+                </div>
+                {/* Summary */}
+                <div className="px-3 py-2.5 space-y-2.5">
+                  <p className="text-[11px] text-indigo-900 leading-relaxed">{thread.chatbotSummary.summary}</p>
+                  {/* Data points */}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    {thread.chatbotSummary.dataPoints.map(({ label, value }) => (
+                      <div key={label}>
+                        <p className="text-[9px] font-semibold text-indigo-400 uppercase tracking-wider leading-none mb-0.5">{label}</p>
+                        <p className={cn('text-[11px] font-medium leading-tight', value === 'Unresolved' ? 'text-amber-600' : 'text-indigo-900')}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Live conversation divider */}
+            {thread.chatbotSummary && thread.messages.length > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 flex-shrink-0">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider flex-shrink-0">Live conversation</span>
+                <div className="flex-1 h-px bg-gray-200" />
               </div>
             )}
 

@@ -66,6 +66,12 @@ export interface Thread {
   relatedChatId?: string;       // for calls: which chat spawned this call
   transferSuggestion?: string;  // suggested queue name for intelligent transfer
   hasProfile?: boolean;         // whether this chat has a customer profile attached
+  chatbotSummary?: {
+    botName: string;
+    handoffReason: string;
+    summary: string;
+    dataPoints: Array<{ label: string; value: string }>;
+  };
 }
 
 export interface DirectoryEntry {

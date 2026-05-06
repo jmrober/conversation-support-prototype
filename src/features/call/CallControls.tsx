@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { Thread } from '../../types';
-import { useCallTimer, formatDuration } from '../../hooks/useCallTimer';
 import { cn } from '../../utils/cn';
 import HoldToEndButton from './HoldToEndButton';
 import ShareCartPanel from '../conversation/ShareCartPanel';
@@ -62,9 +61,6 @@ export default function CallControls({
   onSwitchToChat,
   transferSuggestion,
 }: Props) {
-  const elapsed = useCallTimer(
-    thread.status === 'active' ? thread.callStartedAt : undefined
-  );
   const [detailTab, setDetailTab] = useState<'details' | 'transcript'>('details');
   const [copiedTaskId, setCopiedTaskId] = useState(false);
   const [shareCartOpen, setShareCartOpen] = useState(false);
@@ -112,33 +108,9 @@ export default function CallControls({
     );
   }
 
-  // ── Zone color tokens ───────────────────────────────────────────────────────
-  const zoneBg = isOnHold ? 'bg-slate-50 border-slate-100' : isConsult ? 'bg-slate-50 border-slate-100' : 'bg-blue-50 border-blue-100';
-  const dotColor = isOnHold ? 'bg-slate-400' : isConsult ? 'bg-slate-500 animate-pulse' : 'bg-blue-500 animate-pulse';
-  const labelColor = isOnHold ? 'text-slate-600' : isConsult ? 'text-slate-700' : 'text-blue-800';
-  const timerColor = isOnHold ? 'text-slate-600' : 'text-gray-900';
-  const zoneLabel = isOnHold ? 'On Hold' : isConsult ? 'Consult Call' : 'Live Call';
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white">
-
-      {/* Live / consult / hold status zone */}
-      <div className={cn('px-5 py-4 border-b flex items-center justify-between', zoneBg)}>
-        <div className="flex items-center gap-2">
-          <span className={cn('w-2 h-2 rounded-full flex-shrink-0', dotColor)} />
-          <span className={cn('text-xs font-semibold uppercase tracking-wider', labelColor)}>
-            {zoneLabel}
-          </span>
-          {thread.callDirection && (
-            <span className="text-xs text-gray-400 font-medium">
-              · {thread.callDirection === 'inbound' ? 'Inbound' : 'Outbound'}
-            </span>
-          )}
-        </div>
-        <span className={cn('text-xl font-bold tabular-nums leading-none', timerColor)}>
-          {isActive || isConsult ? formatDuration(elapsed) : isOnHold ? formatDuration(elapsed) : '—'}
-        </span>
-      </div>
 
       {/* Customer on hold banner (consult context) */}
       {isConsult && consultingWithThread && (
@@ -385,16 +357,6 @@ export default function CallControls({
                   </div>
                 </div>
 
-                {/* Notes */}
-                <div className="bg-white rounded-xl border border-gray-100 p-4">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Call notes</p>
-                  <textarea
-                    placeholder="Add a note…"
-                    rows={3}
-                    disabled={!isActive}
-                    className="w-full text-xs text-gray-800 placeholder-gray-400 resize-none border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent leading-relaxed disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
-                </div>
               </div>
             </div>
           )}
@@ -438,21 +400,6 @@ export default function CallControls({
       {/* Controls section */}
       <div className="px-5 pb-5 pt-4 border-t border-gray-100 bg-white flex-shrink-0">
 
-        {/* Transfer suggestion banner */}
-        {transferSuggestion && !isConsult && (
-          <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <span className="text-blue-600 text-sm flex-shrink-0">⚡</span>
-            <span className="flex-1 text-[11px] font-semibold text-blue-800 truncate">
-              Recommended: {transferSuggestion}
-            </span>
-            <button
-              onClick={onOpenDirectory}
-              className="flex-shrink-0 text-[11px] font-semibold px-2.5 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Transfer
-            </button>
-          </div>
-        )}
 
         {/* Warm transfer action — visible only during a consult */}
         {isConsult && consultingWithThread && (
@@ -517,17 +464,30 @@ export default function CallControls({
             <span className="text-[11px] font-medium leading-none">{muted ? 'Unmute' : 'Mute'}</span>
           </button>
 
-          {/* Directory — hidden during consult */}
+          {/* Consult — hidden during consult */}
           {!isConsult && (
             <button
               onClick={onOpenDirectory}
-              title="Directory"
+              title="Start a consult call"
               className="flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
               </svg>
-              <span className="text-[11px] font-medium leading-none">Directory</span>
+              <span className="text-[11px] font-medium leading-none">Consult</span>
+            </button>
+          )}
+
+          {/* Transfer — hidden during consult; phonebook not implemented */}
+          {!isConsult && (
+            <button
+              title="Transfer to agent or queue (phonebook)"
+              className="flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+              <span className="text-[11px] font-medium leading-none">Transfer</span>
             </button>
           )}
 
