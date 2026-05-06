@@ -630,7 +630,7 @@ export default function ConversationPanel({
             onSend={onSendMessage}
             onAISuggest={handleAISuggest}
             recipientName={thread.participantName}
-            disabled={thread.status === 'ended' || thread.status === 'transferred' || thread.status === 'transferring'}
+            disabled={thread.status === 'ended' || thread.status === 'transferred' || thread.status === 'transferring' || thread.status === 'wrap-up'}
           />
         </div>
       ) : null}

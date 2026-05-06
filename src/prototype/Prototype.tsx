@@ -480,6 +480,19 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     return () => clearTimeout(id);
   }, [toastThread]);
 
+  // Auto-expire wrap-up threads after 30s
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = Date.now();
+      setThreads(prev => prev.map(t =>
+        t.status === 'wrap-up' && t.wrapUpStartedAt && now - t.wrapUpStartedAt >= 30_000
+          ? { ...t, status: 'ended' }
+          : t
+      ));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const handleWrapUpEnd = () => {
     setWrapUpActive(false);
     setShowWrapUpOverlay(false);
@@ -613,9 +626,8 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
       return;
     }
     setWrapUpContext({ participantName: thread.participantName, issueTag: thread.issueTag });
-    updateThread(selectedId, { status: 'ended' });
+    updateThread(selectedId, { status: 'wrap-up', wrapUpStartedAt: Date.now() });
     setSelectedId(null);
-    setView('list');
     setWrapUpActive(true);
     setShowWrapUpOverlay(true);
     setPresence('wrap-up');
@@ -660,9 +672,8 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
 
   const handleEndChat = () => {
     if (!selectedId) return;
-    updateThread(selectedId, { status: 'ended' });
+    updateThread(selectedId, { status: 'wrap-up', wrapUpStartedAt: Date.now() });
     setSelectedId(null);
-    setView('list');
   };
 
   const handleWarmTransfer = () => {

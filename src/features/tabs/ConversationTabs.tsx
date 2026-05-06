@@ -18,6 +18,7 @@ function tabPriority(t: Thread): number {
   const now = Date.now();
   const slaMs = t.slaDeadlineAt ? t.slaDeadlineAt - now : Infinity;
 
+  if (t.status === 'wrap-up') return 6;
   if (isCall) return 0;
   if (t.status === 'escalated') return 1;
   if (t.status === 'waiting' && slaMs < 5 * 60_000) return 2;
@@ -66,6 +67,24 @@ function useElapsed(thread: Thread): string {
   const epoch = parseTimestampToEpoch(thread.timestamp);
   if (epoch !== null) return formatMs(now - epoch);
   return '--:--';
+}
+
+// ── Wrap-up countdown ─────────────────────────────────────────────────────────
+const WRAP_UP_SECONDS = 30;
+
+function useWrapUpCountdown(thread: Thread): number {
+  const [remaining, setRemaining] = useState(() => {
+    if (thread.status !== 'wrap-up' || !thread.wrapUpStartedAt) return 0;
+    return Math.max(0, WRAP_UP_SECONDS - Math.floor((Date.now() - thread.wrapUpStartedAt) / 1000));
+  });
+  useEffect(() => {
+    if (thread.status !== 'wrap-up' || !thread.wrapUpStartedAt) return;
+    const id = setInterval(() => {
+      setRemaining(Math.max(0, WRAP_UP_SECONDS - Math.floor((Date.now() - thread.wrapUpStartedAt!) / 1000)));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [thread.status, thread.wrapUpStartedAt]);
+  return remaining;
 }
 
 // ── Top accent color per channel ──────────────────────────────────────────────
@@ -123,9 +142,11 @@ function ConversationTab({
   onClick: () => void;
 }) {
   const elapsed = useElapsed(thread);
+  const wrapUpRemaining = useWrapUpCountdown(thread);
   const isCall = thread.type === 'customer-call' || thread.type === 'internal-call';
   const isInternal = thread.type === 'internal-call' || thread.type === 'internal-chat';
   const isOnHold = thread.status === 'on-hold';
+  const isWrapUp = thread.status === 'wrap-up';
   const isLive = isCall && thread.status === 'active';
   const isConsulting = thread.status === 'consulting';
   const isUnread = !selected && thread.unreadCount > 0;
@@ -138,11 +159,12 @@ function ConversationTab({
         'flex flex-col justify-center px-3 py-2.5 border-r border-gray-200 text-left transition-all min-w-0 border-t-2 relative overflow-hidden',
         isNew && 'animate-tab-enter',
         selected
-          ? cn('flex-[2] bg-white z-10 -mb-px border-b-2 border-b-white', TOP_ACCENT[thread.type])
+          ? cn('flex-[2] bg-white z-10 -mb-px border-b-2 border-b-white', isWrapUp ? 'border-t-gray-400' : TOP_ACCENT[thread.type])
           : 'flex-1',
-        !selected && (isUnread || isWaiting)
+        !selected && isWrapUp && 'bg-gray-50 border-t-gray-300',
+        !selected && !isWrapUp && (isUnread || isWaiting)
           ? cn('bg-gray-50', TOP_ACCENT_UNREAD[thread.type], 'animate-border-pulse')
-          : !selected && 'bg-gray-100 hover:bg-gray-50 border-t-transparent'
+          : !selected && !isWrapUp && 'bg-gray-100 hover:bg-gray-50 border-t-transparent'
       )}
     >
       {/* Row 1: channel type + status indicators */}
@@ -178,6 +200,9 @@ function ConversationTab({
         {isConsulting && (
           <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wide flex-shrink-0">Consult</span>
         )}
+        {isWrapUp && (
+          <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wide flex-shrink-0">Wrap-up</span>
+        )}
         {isUnread && (
           <span className="min-w-[14px] h-[14px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none flex-shrink-0">
             {thread.unreadCount}
@@ -188,12 +213,14 @@ function ConversationTab({
         )}
       </div>
 
-      {/* Row 2: live elapsed timer */}
+      {/* Row 2: elapsed or wrap-up countdown */}
       <span className={cn(
         'text-[13px] font-mono font-semibold tabular-nums leading-tight',
-        selected ? 'text-gray-800' : isUnread ? 'text-blue-600' : 'text-gray-400'
+        isWrapUp
+          ? selected ? 'text-gray-500' : 'text-gray-400'
+          : selected ? 'text-gray-800' : isUnread ? 'text-blue-600' : 'text-gray-400'
       )}>
-        {elapsed}
+        {isWrapUp ? `0:${String(wrapUpRemaining).padStart(2, '0')}` : elapsed}
       </span>
     </button>
   );

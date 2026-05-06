@@ -60,6 +60,7 @@ export interface Thread {
   // call-specific
   callDirection?: 'inbound' | 'outbound';
   callStartedAt?: number; // epoch ms, for live timer
+  wrapUpStartedAt?: number; // epoch ms, when wrap-up began
   muted?: boolean;
   consultingWithThreadId?: string;
   // scenario fields
