@@ -213,6 +213,12 @@ export default function CallControls({
                   <div className="text-xs text-gray-400 mt-0.5">{consultCall.participantRole}</div>
                 )}
               </div>
+              <button
+                onClick={onEndConsult}
+                className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+              >
+                End Consult
+              </button>
             </div>
             {/* Consult controls — Hold + Mute only */}
             <div className="flex gap-2">
@@ -235,15 +241,6 @@ export default function CallControls({
                   {muted ? (<><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" /></>) : (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />)}
                 </svg>
                 <span className="text-[11px] font-medium leading-none">{muted ? 'Unmute' : 'Mute'}</span>
-              </button>
-              <button
-                onClick={onEndConsult}
-                className="flex-[2] flex flex-col items-center justify-center gap-1 h-11 rounded-lg border border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
-                </svg>
-                <span className="text-[11px] font-medium leading-none">End Consult</span>
               </button>
             </div>
           </div>
