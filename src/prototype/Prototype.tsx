@@ -652,16 +652,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     setSelectedId(null);
   };
 
-  const handleWarmTransfer = () => {
-    if (!selectedId) return;
-    const consultThread = threads.find(t => t.type === 'internal-call' && t.consultingWithThreadId === selectedId);
-    if (!consultThread) return;
-    updateThread(selectedId, { status: 'transferred' });
-    setThreads(prev => prev.filter(t => t.id !== consultThread.id));
-    setSelectedId(null);
-    setView('list');
-  };
-
   const handleOutboundCall = (entry: DirectoryEntry) => {
     const callId = `call-${Date.now()}`;
     setThreads(prev => [...prev, {
@@ -789,7 +779,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               composerText={composerText} muted={muted}
               onComposerChange={setComposerText} onSendMessage={handleSendMessage}
               onHoldToggle={handleHoldToggle} onMuteToggle={() => { if (effectiveSelectedId) updateThread(effectiveSelectedId, { muted: !muted }); }}
-              onEndCall={handleEndCall} onEndConsult={handleEndConsult} onWarmTransfer={handleWarmTransfer}
+              onEndCall={handleEndCall} onEndConsult={handleEndConsult}
               onOpenDirectory={() => setActivePanel('directory')}
               onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
               onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
@@ -902,7 +892,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             onMuteToggle={() => { if (effectiveSelectedId) updateThread(effectiveSelectedId, { muted: !muted }); }}
             onEndCall={handleEndCall}
             onEndConsult={handleEndConsult}
-            onWarmTransfer={handleWarmTransfer}
             onOpenDirectory={() => setActivePanel('directory')}
             onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
             onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}

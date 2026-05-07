@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Thread } from '../../types';
 import { cn } from '../../utils/cn';
-import HoldToEndButton from './HoldToEndButton';
 import ShareCartPanel from '../conversation/ShareCartPanel';
 
 function useElapsedTimer(startedAt?: number): string {
@@ -36,7 +35,6 @@ interface Props {
   onMuteToggle: () => void;
   onRequestEndCall?: () => void;
   onEndConsult?: () => void;
-  onWarmTransfer: () => void;
   onOpenDirectory: () => void;
   relatedChat?: Thread | null;
   onSwitchToChat?: () => void;
@@ -62,7 +60,6 @@ export default function CallControls({
   onMuteToggle,
   onRequestEndCall,
   onEndConsult,
-  onWarmTransfer,
   onOpenDirectory,
   relatedChat,
   onSwitchToChat,
@@ -239,27 +236,16 @@ export default function CallControls({
                 </svg>
                 <span className="text-[11px] font-medium leading-none">{muted ? 'Unmute' : 'Mute'}</span>
               </button>
-              <div className="flex-[2]">
-                <HoldToEndButton
-                  onConfirm={onEndConsult ?? (() => {})}
-                  label="End Consult"
-                  variant="tile"
-                />
-              </div>
+              <button
+                onClick={onEndConsult}
+                className="flex-[2] flex flex-col items-center justify-center gap-1 h-11 rounded-lg border border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
+                </svg>
+                <span className="text-[11px] font-medium leading-none">End Consult</span>
+              </button>
             </div>
-          </div>
-
-          {/* ── Warm transfer CTA ── */}
-          <div className="px-4 pb-3 flex-shrink-0">
-            <button
-              onClick={onWarmTransfer}
-              className="w-full flex items-center justify-center gap-2 h-11 rounded-lg bg-blue-900 text-white hover:bg-blue-800 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-              <span className="text-sm font-semibold">Transfer {thread.participantName} to {consultCall.participantName}</span>
-            </button>
           </div>
 
           {/* ── Divider before details ── */}

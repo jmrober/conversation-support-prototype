@@ -19,7 +19,6 @@ interface Props {
   onMuteToggle: () => void;
   onEndCall: () => void;
   onEndConsult?: () => void;
-  onWarmTransfer: () => void;
   onOpenDirectory: () => void;
   onOpenResponseAssist: (tab: 'suggested' | 'library') => void;
   onOpenChatTransfer?: () => void;
@@ -124,7 +123,6 @@ export default function ConversationPanel({
   onMuteToggle,
   onEndCall,
   onEndConsult,
-  onWarmTransfer,
   onOpenDirectory,
   onOpenChatTransfer,
   onStartCall,
@@ -460,7 +458,6 @@ export default function ConversationPanel({
           onMuteToggle={onMuteToggle}
           onRequestEndCall={isConsulting ? () => setEndCallConfirm(true) : undefined}
           onEndConsult={onEndConsult}
-          onWarmTransfer={onWarmTransfer}
           onOpenDirectory={onOpenDirectory}
           relatedChat={relatedChat}
           onSwitchToChat={onSwitchToChat}
