@@ -676,7 +676,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     setActivePanel(null);
   };
 
-  const handleDialNumber = (number: string, name?: string) => {
+  const handleDialNumber = (number: string, name?: string, fromChatId?: string) => {
     const callId = `call-${Date.now()}`;
     setThreads(prev => [...prev, {
       id: callId,
@@ -690,6 +690,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
       messages: [],
       callDirection: 'outbound',
       callStartedAt: Date.now(),
+      ...(fromChatId ? { relatedChatId: fromChatId } : {}),
     }]);
     setSelectedId(callId);
     setView('detail');
@@ -789,7 +790,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
               onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
               onStartCall={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat')
-                ? (phone: string) => handleDialNumber(phone, selectedThread.participantName)
+                ? (phone: string) => handleDialNumber(phone, selectedThread.participantName, selectedThread.id)
                 : undefined}
               relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
               onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
