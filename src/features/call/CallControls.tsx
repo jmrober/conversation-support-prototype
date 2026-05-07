@@ -34,6 +34,7 @@ interface Props {
   muted: boolean;
   onHoldToggle: () => void;
   onMuteToggle: () => void;
+  onRequestEndCall?: () => void;
   onEndConsult?: () => void;
   onWarmTransfer: () => void;
   onOpenDirectory: () => void;
@@ -59,6 +60,7 @@ export default function CallControls({
   muted,
   onHoldToggle,
   onMuteToggle,
+  onRequestEndCall,
   onEndConsult,
   onWarmTransfer,
   onOpenDirectory,
@@ -67,10 +69,17 @@ export default function CallControls({
 }: Props) {
   const [detailTab, setDetailTab] = useState<'details' | 'transcript'>('details');
   const [copiedTaskId, setCopiedTaskId] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState(false);
   const [shareCartOpen, setShareCartOpen] = useState(false);
 
-  const customerElapsed = useElapsedTimer(thread.callStartedAt);
   const consultElapsed = useElapsedTimer(consultCall?.callStartedAt);
+
+  const handleCopyPhone = () => {
+    if (!thread.participantPhone) return;
+    navigator.clipboard.writeText(thread.participantPhone);
+    setCopiedPhone(true);
+    setTimeout(() => setCopiedPhone(false), 2000);
+  };
 
   const handleCopyTaskId = () => {
     navigator.clipboard.writeText(CALL_CONTEXT.taskId);
@@ -120,66 +129,117 @@ export default function CallControls({
 
       {/* ── Consulting dual-leg layout ── */}
       {isConsulting && consultCall ? (
-        <div className="px-4 py-3 flex flex-col gap-2 flex-shrink-0 border-b border-gray-100">
-
-          {/* Warm transfer CTA */}
-          <button
-            onClick={onWarmTransfer}
-            className="w-full flex items-center justify-center gap-2 h-11 rounded-lg bg-blue-900 text-white hover:bg-blue-800 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-            <span className="text-sm font-semibold">Transfer {thread.participantName} to {consultCall.participantName}</span>
-          </button>
-
-          {/* Customer on hold card */}
-          <div className="bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-[9px] font-bold uppercase tracking-widest text-amber-600 mb-0.5">Customer · On Hold</div>
-              <div className="text-sm font-semibold text-gray-900 truncate">{thread.participantName}</div>
-            </div>
-            <span className="text-[13px] font-mono font-semibold text-amber-700 tabular-nums flex-shrink-0">{customerElapsed}</span>
-          </div>
-
-          {/* Consulting with card */}
-          <div className="bg-slate-50 border border-slate-100 rounded-xl px-3.5 py-3">
-            <div className="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-2">Consulting With</div>
+        <>
+          {/* ── Customer leg ── */}
+          <div className="px-4 pt-4 pb-3 flex-shrink-0">
+            {/* Contact info row */}
             <div className="flex items-start justify-between gap-2 mb-3">
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-gray-900 leading-tight">{consultCall.participantName}</div>
-                {consultCall.participantRole && (
-                  <div className="text-[11px] text-gray-400 mt-0.5">{consultCall.participantRole}</div>
+                <div className="text-[9px] font-bold uppercase tracking-widest text-amber-600 mb-1">Customer · On Hold</div>
+                <div className="text-[15px] font-semibold text-gray-900 leading-tight">{thread.participantName}</div>
+                {thread.participantPhone && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[12px] font-mono text-gray-500 tracking-wide">{thread.participantPhone}</span>
+                    <button onClick={handleCopyPhone} className="text-gray-400 hover:text-gray-600 transition-colors" title="Copy phone">
+                      {copiedPhone
+                        ? <svg className="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                        : <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                      }
+                    </button>
+                  </div>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[13px] font-mono font-semibold text-slate-700 tabular-nums">{consultElapsed}</span>
-              </div>
+              <button
+                onClick={onRequestEndCall}
+                className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+              >
+                End Call
+              </button>
             </div>
+            {/* Customer controls */}
             <div className="flex gap-2">
+              <button
+                onClick={onHoldToggle}
+                className="flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg bg-slate-600 text-white hover:bg-slate-700 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-[11px] font-medium leading-none">Resume</span>
+              </button>
               <button
                 onClick={onMuteToggle}
                 className={cn(
-                  'flex-1 flex flex-col items-center justify-center gap-1 h-10 rounded-lg transition-colors',
-                  muted
-                    ? 'bg-gray-800 text-white hover:bg-gray-900'
-                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-slate-200'
+                  'flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg transition-colors',
+                  muted ? 'bg-gray-800 text-white hover:bg-gray-900' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
                 )}
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  {muted ? (
-                    <>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
-                    </>
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  )}
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {muted ? (<><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" /></>) : (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />)}
                 </svg>
-                <span className="text-[10px] font-medium leading-none">{muted ? 'Unmute' : 'Mute'}</span>
+                <span className="text-[11px] font-medium leading-none">{muted ? 'Unmute' : 'Mute'}</span>
               </button>
-              <div className="flex-1">
+              <button
+                onClick={onOpenDirectory}
+                className="flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                </svg>
+                <span className="text-[11px] font-medium leading-none">Consult</span>
+              </button>
+              <button
+                className="flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+                <span className="text-[11px] font-medium leading-none">Transfer</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ── Divider ── */}
+          <div className="mx-4 border-t border-gray-100" />
+
+          {/* ── Consult leg ── */}
+          <div className="px-4 pt-4 pb-3 flex-shrink-0">
+            {/* Contact info row */}
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Consulting With · {consultElapsed}</span>
+                </div>
+                <div className="text-[15px] font-semibold text-gray-900 leading-tight">{consultCall.participantName}</div>
+                {consultCall.participantRole && (
+                  <div className="text-xs text-gray-400 mt-0.5">{consultCall.participantRole}</div>
+                )}
+              </div>
+            </div>
+            {/* Consult controls — Hold + Mute only */}
+            <div className="flex gap-2">
+              <button
+                className="flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />
+                </svg>
+                <span className="text-[11px] font-medium leading-none">Hold</span>
+              </button>
+              <button
+                onClick={onMuteToggle}
+                className={cn(
+                  'flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg transition-colors',
+                  muted ? 'bg-gray-800 text-white hover:bg-gray-900' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                )}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {muted ? (<><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" /></>) : (<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />)}
+                </svg>
+                <span className="text-[11px] font-medium leading-none">{muted ? 'Unmute' : 'Mute'}</span>
+              </button>
+              <div className="flex-[2]">
                 <HoldToEndButton
                   onConfirm={onEndConsult ?? (() => {})}
                   label="End Consult"
@@ -189,7 +249,22 @@ export default function CallControls({
             </div>
           </div>
 
-        </div>
+          {/* ── Warm transfer CTA ── */}
+          <div className="px-4 pb-3 flex-shrink-0">
+            <button
+              onClick={onWarmTransfer}
+              className="w-full flex items-center justify-center gap-2 h-11 rounded-lg bg-blue-900 text-white hover:bg-blue-800 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+              <span className="text-sm font-semibold">Transfer {thread.participantName} to {consultCall.participantName}</span>
+            </button>
+          </div>
+
+          {/* ── Divider before details ── */}
+          <div className="border-t border-gray-100" />
+        </>
       ) : (
         /* ── Standard single-leg call controls ── */
         <div className="px-4 py-3 bg-white flex-shrink-0">

@@ -235,6 +235,7 @@ export default function ConversationPanel({
 
   const isCall = thread.type === 'customer-call' || thread.type === 'internal-call';
   const isChat = thread.type === 'customer-chat' || thread.type === 'internal-chat';
+  const isConsulting = isCall && !!consultCall;
 
   const TONES: { key: Tone; label: string }[] = [
     { key: 'balanced', label: 'Balanced' },
@@ -246,8 +247,8 @@ export default function ConversationPanel({
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white relative">
 
-      {/* Conversation header */}
-      <div className="px-4 py-4 flex-shrink-0 bg-white">
+      {/* Conversation header — hidden when consulting (both legs shown inline in CallControls) */}
+      {!isConsulting && <div className="px-4 py-4 flex-shrink-0 bg-white">
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
             {thread.type === 'internal-chat' && thread.teamName ? (
@@ -414,7 +415,7 @@ export default function ConversationPanel({
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* Chat details panel — toggled from header */}
       {isChat && detailsOpen && (
@@ -457,7 +458,7 @@ export default function ConversationPanel({
           muted={muted}
           onHoldToggle={onHoldToggle}
           onMuteToggle={onMuteToggle}
-
+          onRequestEndCall={isConsulting ? () => setEndCallConfirm(true) : undefined}
           onEndConsult={onEndConsult}
           onWarmTransfer={onWarmTransfer}
           onOpenDirectory={onOpenDirectory}
