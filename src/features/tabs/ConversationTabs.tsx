@@ -8,7 +8,6 @@ interface Props {
   threads: Thread[];
   selectedId: string | null;
   onSelect: (id: string) => void;
-  onNewConversation: () => void;
 }
 
 // ── Ordering: calls first, then chats by urgency ──────────────────────────────
@@ -207,27 +206,9 @@ function ConversationTab({
   );
 }
 
-// ── Empty slot tab ────────────────────────────────────────────────────────────
-function EmptyTab({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex-1 flex flex-col items-center justify-center border-r border-gray-200 border-t-2 border-t-transparent bg-gray-50 hover:bg-gray-100 transition-colors gap-1 py-2.5 min-w-0 group"
-    >
-      <div className="w-5 h-5 rounded-full border border-dashed border-gray-300 group-hover:border-gray-400 flex items-center justify-center transition-colors">
-        <svg className="w-3 h-3 text-gray-300 group-hover:text-gray-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h11m2-4v4m2-2h-4" />
-        </svg>
-      </div>
-      <span className="text-[9px] font-medium text-gray-300 group-hover:text-gray-400 uppercase tracking-wide transition-colors">Add</span>
-    </button>
-  );
-}
-
 // ── Tab bar ───────────────────────────────────────────────────────────────────
-export default function ConversationTabs({ threads, selectedId, onSelect, onNewConversation }: Props) {
+export default function ConversationTabs({ threads, selectedId, onSelect }: Props) {
   const sorted = sortForTabs(threads).slice(0, MAX_SLOTS);
-  const emptyCount = Math.max(0, MAX_SLOTS - sorted.length);
 
   // Track which thread IDs are genuinely new (just mounted)
   const seenIds = useRef(new Set<string>());
@@ -249,9 +230,6 @@ export default function ConversationTabs({ threads, selectedId, onSelect, onNewC
           muted={(thread.muted ?? false) && (thread.type === 'customer-call' || thread.type === 'internal-call')}
           onClick={() => onSelect(thread.id)}
         />
-      ))}
-      {Array.from({ length: emptyCount }).map((_, i) => (
-        <EmptyTab key={`empty-${i}`} onClick={onNewConversation} />
       ))}
     </div>
   );

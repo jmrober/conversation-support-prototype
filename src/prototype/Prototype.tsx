@@ -776,7 +776,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             threads={tabThreads}
             selectedId={effectiveSelectedId}
             onSelect={handleSelectThread}
-            onNewConversation={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
           />
           {selectedThread ? (
             <SLOTS.ConversationPanel
@@ -884,7 +883,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
           threads={tabThreads}
           selectedId={effectiveSelectedId}
           onSelect={handleSelectThread}
-          onNewConversation={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
         />
         {selectedThread ? (
           <SLOTS.ConversationPanel
