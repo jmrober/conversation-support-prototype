@@ -61,14 +61,8 @@ export default function InboundCallAlert({ call, onAccept, onReject }: Props) {
               {call.participantName}
             </p>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              {call.caseId && (
-                <span className="text-[11px] font-mono text-gray-400">{call.caseId}</span>
-              )}
               {call.issueTag && (
-                <>
-                  {call.caseId && <span className="text-gray-300 text-[10px]">·</span>}
-                  <span className="text-[11px] text-gray-500">{call.issueTag}</span>
-                </>
+                <span className="text-[11px] text-gray-500">{call.issueTag}</span>
               )}
               {tier && (
                 <>

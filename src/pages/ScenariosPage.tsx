@@ -33,21 +33,12 @@ function ScenarioCard({ flow, index, onClick }: { flow: ScenarioFlow; index: num
         ...sans,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 10 }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
-            <span style={{ ...mono, fontSize: 11, color: '#a3a3a3', letterSpacing: '0.05em', flexShrink: 0 }}>{idStr}</span>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#171717', lineHeight: 1.3, margin: 0, letterSpacing: '-0.01em' }}>{flow.title}</h3>
-          </div>
-          <p style={{ fontSize: 12, color: '#737373', lineHeight: 1.6, margin: 0 }}>{flow.description}</p>
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
+          <span style={{ ...mono, fontSize: 11, color: '#a3a3a3', letterSpacing: '0.05em', flexShrink: 0 }}>{idStr}</span>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#171717', lineHeight: 1.3, margin: 0, letterSpacing: '-0.01em' }}>{flow.title}</h3>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-end', flexShrink: 0, marginTop: 2 }}>
-          {flow.tags.map(tag => (
-            <span key={tag} style={{ ...mono, fontSize: 9, color: '#a3a3a3', border: '1px solid #e5e5e5', padding: '2px 6px', letterSpacing: '0.04em', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
-              {tag}
-            </span>
-          ))}
-        </div>
+        <p style={{ fontSize: 12, color: '#737373', lineHeight: 1.6, margin: 0 }}>{flow.description}</p>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTop: '1px solid #f3f4f6' }}>

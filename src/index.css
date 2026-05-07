@@ -33,6 +33,15 @@ body.prototype-active #root { height: 100vh; }
   animation: toast-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* Hold-to-end fill — expands from left to right over 3s */
+@keyframes hold-fill {
+  0%   { width: 0%; }
+  100% { width: 100%; }
+}
+.animate-hold-fill {
+  animation: hold-fill 3s linear forwards;
+}
+
 /* Incoming chat flash — brief blue wash that fades out */
 @keyframes thread-flash {
   0%   { background-color: rgb(219 234 254); border-left-color: rgb(59 130 246); } /* blue-100, blue-500 */

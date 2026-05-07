@@ -7,7 +7,6 @@ const MAX_SLOTS = 4;
 interface Props {
   threads: Thread[];
   selectedId: string | null;
-  muted?: boolean;
   onSelect: (id: string) => void;
   onNewConversation: () => void;
 }
@@ -63,9 +62,7 @@ function useElapsed(thread: Thread): string {
   }, []);
 
   if (thread.callStartedAt) return formatMs(now - thread.callStartedAt);
-
-  const epoch = parseTimestampToEpoch(thread.timestamp);
-  if (epoch !== null) return formatMs(now - epoch);
+  if (thread.chatStartedAt) return formatMs(now - thread.chatStartedAt);
   return '--:--';
 }
 
@@ -189,10 +186,7 @@ function ConversationTab({
           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
         )}
         {isLive && muted && (
-          <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-          </svg>
+          <span className="text-[8px] font-bold text-gray-500 uppercase tracking-wide flex-shrink-0">Mute</span>
         )}
         {isOnHold && (
           <span className="text-[8px] font-bold text-amber-600 uppercase tracking-wide flex-shrink-0">Hold</span>
@@ -234,17 +228,17 @@ function EmptyTab({ onClick }: { onClick: () => void }) {
       className="flex-1 flex flex-col items-center justify-center border-r border-gray-200 border-t-2 border-t-transparent bg-gray-50 hover:bg-gray-100 transition-colors gap-1 py-2.5 min-w-0 group"
     >
       <div className="w-5 h-5 rounded-full border border-dashed border-gray-300 group-hover:border-gray-400 flex items-center justify-center transition-colors">
-        <svg className="w-2.5 h-2.5 text-gray-300 group-hover:text-gray-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        <svg className="w-3 h-3 text-gray-300 group-hover:text-gray-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h11m2-4v4m2-2h-4" />
         </svg>
       </div>
-      <span className="text-[9px] font-medium text-gray-300 group-hover:text-gray-400 uppercase tracking-wide transition-colors">Open</span>
+      <span className="text-[9px] font-medium text-gray-300 group-hover:text-gray-400 uppercase tracking-wide transition-colors">Add</span>
     </button>
   );
 }
 
 // ── Tab bar ───────────────────────────────────────────────────────────────────
-export default function ConversationTabs({ threads, selectedId, muted, onSelect, onNewConversation }: Props) {
+export default function ConversationTabs({ threads, selectedId, onSelect, onNewConversation }: Props) {
   const sorted = sortForTabs(threads).slice(0, MAX_SLOTS);
   const emptyCount = Math.max(0, MAX_SLOTS - sorted.length);
 
@@ -265,7 +259,7 @@ export default function ConversationTabs({ threads, selectedId, muted, onSelect,
           thread={thread}
           selected={thread.id === selectedId}
           isNew={newIds.has(thread.id)}
-          muted={muted && (thread.type === 'customer-call' || thread.type === 'internal-call')}
+          muted={(thread.muted ?? false) && (thread.type === 'customer-call' || thread.type === 'internal-call')}
           onClick={() => onSelect(thread.id)}
         />
       ))}

@@ -22,7 +22,7 @@ interface Props {
   onOpenDirectory: () => void;
   onOpenResponseAssist: (tab: 'suggested' | 'library') => void;
   onOpenChatTransfer?: () => void;
-  onStartCall?: () => void;
+  onStartCall?: (phone: string) => void;
   onEndChat?: () => void;
   relatedChat?: Thread | null;
   onSwitchToChat?: () => void;
@@ -144,6 +144,9 @@ export default function ConversationPanel({
   // End-chat 2-tap confirm
   const [endChatConfirm, setEndChatConfirm] = useState(false);
 
+  // End-call confirm
+  const [endCallConfirm, setEndCallConfirm] = useState(false);
+
   // Sentiment alert
   const [sentimentDismissed, setSentimentDismissed] = useState(false);
 
@@ -152,6 +155,13 @@ export default function ConversationPanel({
 
   // Chat details panel
   const [detailsOpen, setDetailsOpen] = useState(false);
+
+  // Phone copy
+  const [copiedPhone, setCopiedPhone] = useState(false);
+
+  // Dial pad (call from chat)
+  const [dialPadOpen, setDialPadOpen] = useState(false);
+  const [dialInput, setDialInput] = useState('');
 
   // 3-dot menu
   const [menuOpen, setMenuOpen] = useState(false);
@@ -178,9 +188,12 @@ export default function ConversationPanel({
     setSuggestText('');
     setSuggestTone('balanced');
     setEndChatConfirm(false);
+    setEndCallConfirm(false);
     setSentimentDismissed(false);
     setShareCartOpen(false);
     setDetailsOpen(false);
+    setDialPadOpen(false);
+    setDialInput('');
   }, [thread.id]);
 
   const handleSummarise = () => {
@@ -232,7 +245,7 @@ export default function ConversationPanel({
     <div className="flex-1 flex flex-col min-h-0 bg-white relative">
 
       {/* Conversation header */}
-      <div className="px-4 py-4 border-b border-gray-200 flex-shrink-0 bg-white">
+      <div className="px-4 py-4 flex-shrink-0 bg-white">
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
             {thread.type === 'internal-chat' && thread.teamName ? (
@@ -254,6 +267,30 @@ export default function ConversationPanel({
                     <span className="text-xs text-gray-400 flex-shrink-0">{thread.participantRole}</span>
                   )}
                 </div>
+                {isCall && thread.participantPhone && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[12px] font-mono text-gray-500 tracking-wide">{thread.participantPhone}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(thread.participantPhone!);
+                        setCopiedPhone(true);
+                        setTimeout(() => setCopiedPhone(false), 2000);
+                      }}
+                      className="flex items-center gap-0.5 text-[10px] font-medium text-gray-400 hover:text-gray-600 transition-colors"
+                      title="Copy phone number"
+                    >
+                      {copiedPhone ? (
+                        <svg className="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                )}
                 {(thread.queue || thread.entryUrl) && (
                   <div className="flex flex-col gap-0.5">
                     {thread.queue && (
@@ -271,10 +308,14 @@ export default function ConversationPanel({
               </>
             )}
           </div>
-          {thread.caseId && (
-            <span className="text-[11px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0">
-              {thread.caseId}
-            </span>
+          {/* End Call button */}
+          {isCall && (
+            <button
+              onClick={() => setEndCallConfirm(true)}
+              className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+            >
+              End Call
+            </button>
           )}
 
           {/* End Chat button */}
@@ -341,7 +382,11 @@ export default function ConversationPanel({
                   {/* Call */}
                   {onStartCall && (
                     <button
-                      onClick={() => { onStartCall(); closeMenu(); }}
+                      onClick={() => {
+                        setDialInput(thread.participantPhone ?? '');
+                        setDialPadOpen(true);
+                        closeMenu();
+                      }}
                       className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
                     >
                       <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -634,6 +679,97 @@ export default function ConversationPanel({
           />
         </div>
       ) : null}
+
+      {/* Dial pad overlay (Call from chat) */}
+      {dialPadOpen && onStartCall && (
+        <div className="absolute inset-0 z-30 bg-white flex flex-col">
+          <div className="flex items-center gap-2 px-4 py-3 flex-shrink-0">
+            <button
+              onClick={() => setDialPadOpen(false)}
+              className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+          </div>
+          <div className="flex-1 flex flex-col px-5 pb-8 gap-4 overflow-y-auto">
+            <p className="text-[11px] text-gray-500 leading-snug">
+              Call <span className="font-semibold text-gray-700">{thread.participantName}</span>
+            </p>
+            <input
+              type="tel"
+              placeholder="Enter phone number"
+              value={dialInput}
+              onChange={(e) => setDialInput(e.target.value)}
+              autoFocus
+              className="text-sm text-gray-800 placeholder-gray-400 border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-300 focus:border-transparent"
+            />
+            <div className="grid grid-cols-3 gap-2">
+              {['1','2','3','4','5','6','7','8','9','*','0','#'].map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setDialInput(v => v + key)}
+                  className="h-12 rounded-xl bg-gray-50 border border-gray-200 text-gray-800 text-base font-medium hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-auto">
+              <button
+                onClick={() => setDialInput(v => v.slice(0, -1))}
+                disabled={!dialInput}
+                className="flex items-center justify-center w-12 h-11 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition-colors flex-shrink-0"
+                title="Backspace"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => { if (dialInput.trim()) { onStartCall(dialInput.trim()); setDialPadOpen(false); } }}
+                disabled={!dialInput.trim()}
+                className="flex-1 flex items-center justify-center gap-2 h-11 text-white text-sm font-semibold rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
+                </svg>
+                Call
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* End Call confirmation modal */}
+      {endCallConfirm && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+          <div className="bg-white rounded-2xl shadow-xl w-64 p-6 flex flex-col gap-4">
+            <div>
+              <p className="text-[13px] font-bold text-gray-900 mb-1">End this call?</p>
+              <p className="text-[12px] text-gray-500 leading-relaxed">
+                This will end the call with {thread.participantName}. This action can't be undone.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => { setEndCallConfirm(false); onEndCall(); }}
+                className="w-full py-2 rounded-xl bg-red-600 text-white text-[13px] font-semibold hover:bg-red-700 transition-colors"
+              >
+                End Call
+              </button>
+              <button
+                onClick={() => setEndCallConfirm(false)}
+                className="w-full py-2 rounded-xl border border-gray-200 text-gray-600 text-[13px] font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* End Chat confirmation modal */}
       {endChatConfirm && (

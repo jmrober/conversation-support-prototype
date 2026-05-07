@@ -38,20 +38,6 @@ function PrototypeNav({
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, backgroundColor: '#f7f7f5', ...mono }}>
-      {/* Top nav */}
-      <div style={{ height: 52, flexShrink: 0, borderBottom: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', padding: '0 24px' }}>
-        <button
-          onClick={onNavigateScenarios}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 700, color: '#171717', background: '#ffffff', border: '1px solid #d4d4d4', padding: '6px 14px', cursor: 'pointer', letterSpacing: '0.04em' }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#ffffff')}
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-          SCENARIOS
-        </button>
-      </div>
 
       {/* Body */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px', gap: 0 }}>
@@ -409,10 +395,8 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   const [, setView] = useState<View>('list');
   const [presence, setPresence] = useState<PresenceStatus>('available');
   const [activePanel, setActivePanel] = useState<PanelType>(null);
-  const [muted, setMuted] = useState(false);
   const [composerText, setComposerText] = useState('');
   const [wrapUpActive, setWrapUpActive] = useState(false);
-  const [showWrapUpOverlay, setShowWrapUpOverlay] = useState(false);
   const [wrapUpContext, setWrapUpContext] = useState<{ participantName?: string; issueTag?: string } | null>(null);
   const [directoryIntent, setDirectoryIntent] = useState<'outbound' | 'internal-chat'>('outbound');
   const [railExpanded, setRailExpanded] = useState(false);
@@ -421,6 +405,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   const [toastThread, setToastThread] = useState<{ id: string; name: string; preview: string } | null>(null);
   const prevUnreadsRef = useRef<Record<string, number>>({});
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chatStartTimesRef = useRef<Record<string, number>>({});
 
   // Reset step when flow changes, load first step's threads
   useEffect(() => {
@@ -431,24 +416,30 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   useEffect(() => {
     const step = flow?.steps[stepIndex];
     if (step) {
-      setThreads(step.threads);
+      const now = Date.now();
+      const threadsWithStartTimes = step.threads.map(t => {
+        const isChat = t.type === 'customer-chat' || t.type === 'internal-chat';
+        if (isChat && !t.chatStartedAt) {
+          if (!chatStartTimesRef.current[t.id]) chatStartTimesRef.current[t.id] = now;
+          return { ...t, chatStartedAt: chatStartTimesRef.current[t.id] };
+        }
+        return t;
+      });
+      setThreads(threadsWithStartTimes);
       const initialSelected = step.initialSelectedId ?? null;
       setSelectedId(initialSelected);
       setView(step.initialView ?? 'list');
       setActivePanel(null);
-      setMuted(false);
       setToastThread(null);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       // Reset unread tracking so we don't false-fire on step load
       prevUnreadsRef.current = Object.fromEntries(step.threads.map(t => [t.id, t.unreadCount]));
       if (step.initialWrapUpActive) {
         setWrapUpActive(true);
-        setShowWrapUpOverlay(true);
         setPresence('wrap-up');
         setWrapUpContext(step.initialWrapUpContext ?? null);
       } else {
         setWrapUpActive(false);
-        setShowWrapUpOverlay(false);
         setWrapUpContext(null);
       }
       // Show toast for any thread that starts with unread messages and isn't the selected one
@@ -495,7 +486,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
 
   const handleWrapUpEnd = () => {
     setWrapUpActive(false);
-    setShowWrapUpOverlay(false);
     setWrapUpContext(null);
     setPresence('available');
   };
@@ -528,6 +518,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   const effectiveSelectedId = selectedId ?? tabThreads[0]?.id ?? null;
   const selectedThread = threads.find(t => t.id === effectiveSelectedId) ?? null;
   const selectedIsCall = selectedThread?.type === 'customer-call' || selectedThread?.type === 'internal-call';
+  const muted = selectedThread?.muted ?? false;
 
   const consultingWithThread = selectedThread?.consultingWithThreadId
     ? (threads.find(t => t.id === selectedThread.consultingWithThreadId) ?? null)
@@ -563,12 +554,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     const arriving = threads.find(th => th.id === id);
     const isCall = (t?: typeof leaving) => t?.type === 'customer-call' || t?.type === 'internal-call';
 
-    if (isCall(leaving) && !isCall(arriving)) {
-      setMuted(true);   // leaving a call → mute so customer can't hear chat activity
-    } else if (isCall(arriving)) {
-      setMuted(false);  // returning to a call → unmute
-    }
-
     setSelectedId(id);
     setView('detail');
     setActivePanel(null);
@@ -583,10 +568,8 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     setPresence(p);
     if (p === 'wrap-up') {
       setWrapUpActive(true);
-      setShowWrapUpOverlay(true);
     } else {
       setWrapUpActive(false);
-      setShowWrapUpOverlay(false);
     }
   };
 
@@ -629,9 +612,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     updateThread(selectedId, { status: 'wrap-up', wrapUpStartedAt: Date.now() });
     setSelectedId(null);
     setWrapUpActive(true);
-    setShowWrapUpOverlay(true);
     setPresence('wrap-up');
-    setMuted(false);
   };
 
   const handleConsult = (entry: DirectoryEntry) => {
@@ -655,7 +636,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     setThreads(prev => [...prev, consultThread]);
     setSelectedId(consultId);
     setActivePanel(null);
-    setMuted(true);
   };
 
   const handleColdTransfer = (entry: DirectoryEntry) => {
@@ -707,13 +687,14 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     setActivePanel(null);
   };
 
-  const handleDialNumber = (number: string) => {
+  const handleDialNumber = (number: string, name?: string) => {
     const callId = `call-${Date.now()}`;
     setThreads(prev => [...prev, {
       id: callId,
       type: 'customer-call',
       status: 'active',
-      participantName: number,
+      participantName: name ?? number,
+      participantPhone: number,
       lastMessage: 'Outbound call',
       timestamp: formatTime(new Date()),
       unreadCount: 0,
@@ -741,6 +722,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
       timestamp: formatTime(new Date()),
       unreadCount: 0,
       messages: [],
+      chatStartedAt: Date.now(),
     }]);
     setSelectedId(chatId);
     setView('detail');
@@ -761,7 +743,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
         if (!customerCall && !consultCall) return;
         e.preventDefault();
-        setMuted(m => !m);
+        if (effectiveSelectedId) updateThread(effectiveSelectedId, { muted: !(selectedThread?.muted ?? false) });
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
@@ -800,7 +782,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             onToggleExpand={() => setRailExpanded(e => !e)}
           />
 
-          {wrapUpActive && !showWrapUpOverlay && (
+          {wrapUpActive && (
             <div className="flex items-center gap-3 px-4 py-2 bg-yellow-50 border-b border-yellow-200 flex-shrink-0">
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
@@ -827,14 +809,14 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               thread={selectedThread} consultingWithThread={consultingWithThread}
               composerText={composerText} muted={muted}
               onComposerChange={setComposerText} onSendMessage={handleSendMessage}
-              onHoldToggle={handleHoldToggle} onMuteToggle={() => setMuted(m => !m)}
+              onHoldToggle={handleHoldToggle} onMuteToggle={() => { if (effectiveSelectedId) updateThread(effectiveSelectedId, { muted: !muted }); }}
               onEndCall={handleEndCall} onWarmTransfer={handleWarmTransfer}
               onOpenDirectory={() => setActivePanel('directory')}
               onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
               onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
               onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
               onStartCall={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat')
-                ? () => handleOutboundCall({ id: selectedThread.id, name: selectedThread.participantName, role: selectedThread.participantRole ?? '', department: '', extension: '', available: true, initials: '' })
+                ? (phone: string) => handleDialNumber(phone, selectedThread.participantName)
                 : undefined}
               relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
               onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
@@ -863,13 +845,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             </div>
           )}
 
-          {showWrapUpOverlay && (
-            <SLOTS.WrapUpTimer
-              remaining={wrapUpSecondsLeft} participantName={wrapUpContext?.participantName}
-              issueTag={wrapUpContext?.issueTag} onComplete={handleWrapUpEnd}
-              onSkip={handleWrapUpEnd} onDismiss={() => setShowWrapUpOverlay(false)}
-            />
-          )}
           {ringingCall && (
             <SLOTS.InboundCallAlert call={ringingCall} onAccept={handleAcceptCall} onReject={handleRejectCall} />
           )}
@@ -964,7 +939,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             onComposerChange={setComposerText}
             onSendMessage={handleSendMessage}
             onHoldToggle={handleHoldToggle}
-            onMuteToggle={() => setMuted(m => !m)}
+            onMuteToggle={() => { if (effectiveSelectedId) updateThread(effectiveSelectedId, { muted: !muted }); }}
             onEndCall={handleEndCall}
             onWarmTransfer={handleWarmTransfer}
             onOpenDirectory={() => setActivePanel('directory')}
@@ -972,7 +947,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
             onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
             onStartCall={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat')
-              ? () => handleOutboundCall({ id: selectedThread.id, name: selectedThread.participantName, role: selectedThread.participantRole ?? '', department: '', extension: '', available: true, initials: '' })
+              ? (phone: string) => handleDialNumber(phone, selectedThread.participantName)
               : undefined}
             relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
             onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
@@ -999,18 +974,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               Outbound Call
             </button>
           </div>
-        )}
-
-        {/* Wrap-up overlay */}
-        {showWrapUpOverlay && (
-          <SLOTS.WrapUpTimer
-            remaining={wrapUpSecondsLeft}
-            participantName={wrapUpContext?.participantName}
-            issueTag={wrapUpContext?.issueTag}
-            onComplete={handleWrapUpEnd}
-            onSkip={handleWrapUpEnd}
-            onDismiss={() => setShowWrapUpOverlay(false)}
-          />
         )}
 
         {/* Inbound call alert */}

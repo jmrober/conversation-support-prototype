@@ -43,7 +43,7 @@ export default function ChatComposer({ value, onChange, onSend, onAISuggest, rec
     <div className="border-t border-gray-200 bg-white px-4 pt-3 pb-4 flex-shrink-0">
       {recipientName && (
         <p className="text-[10px] text-gray-400 mb-1.5 px-0.5">
-          Replying to <span className="font-semibold text-gray-500">{recipientName}</span>
+          Replying to
         </p>
       )}
       <textarea

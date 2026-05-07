@@ -268,10 +268,7 @@ export default function ThreadItem({ thread, selected, onClick, compact }: Props
         {thread.issueTag && (
           <span className="text-[10px] text-gray-400 font-medium">{thread.issueTag}</span>
         )}
-        {!thread.issueTag && thread.caseId && (
-          <span className="text-[11px] font-mono text-gray-400">{thread.caseId}</span>
-        )}
-        {!thread.issueTag && !thread.caseId && thread.participantRole && (
+        {!thread.issueTag && thread.participantRole && (
           <span className="text-[11px] text-gray-400">{thread.participantRole}</span>
         )}
       </div>

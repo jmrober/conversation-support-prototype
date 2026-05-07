@@ -8,7 +8,7 @@ export function getDriverNotHomeFlow(): ScenarioFlow {
   const driverMsg1 = {
     id: 's1-d1',
     sender: 'customer' as const,
-    senderName: 'Marcus',
+    senderName: 'Driver',
     text: "Hi, I'm the delivery driver for order ORD-44821. I'm at 12 Maple Street — customer isn't home. Delivery window was 10am–2pm.",
     timestamp: '9:41',
   };
@@ -17,14 +17,14 @@ export function getDriverNotHomeFlow(): ScenarioFlow {
     id: 's1-a1',
     sender: 'agent' as const,
     senderName: 'You',
-    text: "Thanks Marcus, I'm looking up the order now. Give me just a moment.",
+    text: "Thanks, I'm looking up the order now. Give me just a moment.",
     timestamp: '9:42',
   };
 
   const driverMsg2 = {
     id: 's1-d2',
     sender: 'customer' as const,
-    senderName: 'Marcus',
+    senderName: 'Driver',
     text: "No problem. I can wait about 20 minutes before I have to move on. Should I attempt redelivery tomorrow if we can't reach them?",
     timestamp: '9:43',
   };
@@ -49,9 +49,9 @@ export function getDriverNotHomeFlow(): ScenarioFlow {
 
   const step1Chat = {
     id: 's1-chat',
-    type: 'customer-chat' as const,
+    type: 'internal-chat' as const,
     status: 'active' as const,
-    participantName: 'Marcus Rivera',
+    participantName: 'Delivery Driver',
     issueTag: 'LPFR – Not Home',
     queue: 'LPFR Queue',
     source: 'Mobile App',
@@ -88,6 +88,7 @@ export function getDriverNotHomeFlow(): ScenarioFlow {
     type: 'customer-call' as const,
     status: 'active' as const,
     participantName: 'Sarah Chen',
+    participantPhone: '+1 (415) 555-0182',
     issueTag: 'Delivery – Not Home',
     caseId: 'CS-5102',
     callDirection: 'outbound' as const,
@@ -116,15 +117,15 @@ export function getDriverNotHomeFlow(): ScenarioFlow {
   return {
     id: 'driver-not-home',
     index: 1,
-    title: 'Driver Not Home (LPFR)',
-    subtitle: 'Coordinating a missed delivery between driver and customer',
-    tags: ['CHAT+CALL', 'OUTBOUND', 'DELIVERY'],
-    description: 'Driver contacts agent via LPFR queue — agent creates a case, calls the customer, then relays details back to the driver while still on the call.',
+    title: 'Customer Not Home',
+    subtitle: 'Delivery driver cannot reach the customer at the delivery address',
+    tags: [],
+    description: 'Delivery driver contacts agent — customer is not home. Agent creates a case, calls the customer directly, then relays details back to the driver.',
     steps: [
       {
         id: 'chat-arrives',
         label: 'Driver chat arrives',
-        hint: 'Marcus Rivera has contacted the agent via the LPFR queue to report the customer is not home at the delivery address.',
+        hint: 'A delivery driver has contacted the agent via the LPFR queue to report the customer is not home at the delivery address.',
         threads: [step1Chat],
         initialSelectedId: 's1-chat',
         initialView: 'detail',
@@ -132,7 +133,7 @@ export function getDriverNotHomeFlow(): ScenarioFlow {
       {
         id: 'case-created',
         label: 'Agent looks up customer',
-        hint: 'Agent has acknowledged Marcus and switched to an external CRM to look up the order and customer contact details.',
+        hint: 'Agent has acknowledged the driver and switched to an external CRM to look up the order and customer contact details.',
         annotation: 'Agent opens CRM in a separate tab → searches order ORD-44821 → creates case CS-5102 for the missed delivery. This happens outside the call & chat component.',
         threads: [step2Chat],
         initialSelectedId: 's1-chat',
@@ -147,7 +148,7 @@ export function getDriverNotHomeFlow(): ScenarioFlow {
       {
         id: 'driver-update',
         label: 'Agent updates the driver',
-        hint: 'Agent switches back to the Marcus chat to relay what Sarah confirmed, while keeping the customer call live.',
+        hint: 'Agent switches back to the driver chat to relay what Sarah confirmed, while keeping the customer call live.',
         threads: [step4Chat, step4Call],
         initialSelectedId: 's1-chat',
         initialView: 'detail',

@@ -124,9 +124,6 @@ export default function CallSection({
               <div className="text-[15px] font-semibold text-gray-900 group-hover:text-green-800 transition-colors leading-tight">
                 {customerCall.participantName}
               </div>
-              {customerCall.caseId && (
-                <div className="text-[11px] font-mono text-gray-400 mt-0.5">{customerCall.caseId}</div>
-              )}
             </button>
 
             {/* Related chat row */}

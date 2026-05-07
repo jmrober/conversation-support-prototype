@@ -46,6 +46,7 @@ export interface Thread {
   status: ThreadStatus;
   participantName: string;
   participantRole?: string;
+  participantPhone?: string;
   caseId?: string;
   lastMessage: string;
   timestamp: string;
@@ -59,7 +60,8 @@ export interface Thread {
   accountTier?: 'standard' | 'premium' | 'gold';
   // call-specific
   callDirection?: 'inbound' | 'outbound';
-  callStartedAt?: number; // epoch ms, for live timer
+  callStartedAt?: number;  // epoch ms, for live timer
+  chatStartedAt?: number;  // epoch ms, for chat elapsed timer
   wrapUpStartedAt?: number; // epoch ms, when wrap-up began
   muted?: boolean;
   consultingWithThreadId?: string;
