@@ -9,7 +9,7 @@ import ContextStrip from './ContextStrip';
 
 interface Props {
   thread: Thread;
-  consultingWithThread: Thread | null;
+  consultCall?: Thread | null;
   composerText: string;
   muted: boolean;
   onBack?: () => void;
@@ -18,6 +18,7 @@ interface Props {
   onHoldToggle: () => void;
   onMuteToggle: () => void;
   onEndCall: () => void;
+  onEndConsult?: () => void;
   onWarmTransfer: () => void;
   onOpenDirectory: () => void;
   onOpenResponseAssist: (tab: 'suggested' | 'library') => void;
@@ -114,7 +115,7 @@ function generateSuggestion(messages: Message[], participantName: string, tone: 
 
 export default function ConversationPanel({
   thread,
-  consultingWithThread,
+  consultCall,
   composerText,
   muted,
   onComposerChange,
@@ -122,6 +123,7 @@ export default function ConversationPanel({
   onHoldToggle,
   onMuteToggle,
   onEndCall,
+  onEndConsult,
   onWarmTransfer,
   onOpenDirectory,
   onOpenChatTransfer,
@@ -451,11 +453,12 @@ export default function ConversationPanel({
       {isCall ? (
         <CallControls
           thread={thread}
-          consultingWithThread={consultingWithThread}
+          consultCall={consultCall}
           muted={muted}
           onHoldToggle={onHoldToggle}
           onMuteToggle={onMuteToggle}
-          onEndCall={onEndCall}
+
+          onEndConsult={onEndConsult}
           onWarmTransfer={onWarmTransfer}
           onOpenDirectory={onOpenDirectory}
           relatedChat={relatedChat}

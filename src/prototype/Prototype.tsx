@@ -501,9 +501,10 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
 
   const ringingCall = threads.find(t => t.type === 'customer-call' && t.status === 'ringing') ?? null;
 
-  // All active threads (calls + chats) shown in tab bar — excludes ended/transferred/ringing
+  // All active threads shown in tab bar — excludes ended/transferred/ringing and internal consult legs
   const tabThreads = threads.filter(
     t => t.status !== 'ended' && t.status !== 'transferred' && t.status !== 'ringing'
+      && !(t.type === 'internal-call' && !!t.consultingWithThreadId)
   );
 
   const activeChatCount = threads.filter(
@@ -516,8 +517,9 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   const selectedIsCall = selectedThread?.type === 'customer-call' || selectedThread?.type === 'internal-call';
   const muted = selectedThread?.muted ?? false;
 
-  const consultingWithThread = selectedThread?.consultingWithThreadId
-    ? (threads.find(t => t.id === selectedThread.consultingWithThreadId) ?? null)
+  // When the selected customer call is in consulting status, find its consult leg
+  const consultCallForCustomer = selectedThread?.status === 'consulting'
+    ? (threads.find(t => t.type === 'internal-call' && t.consultingWithThreadId === selectedThread.id) ?? null)
     : null;
 
   const activeCustomerCall = selectedThread?.type === 'customer-call' && selectedThread?.status === 'active'
@@ -592,16 +594,21 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
 
   const handleEndCall = () => {
     if (!selectedId) return;
-    const thread = threads.find(t => t.id === selectedId);
-    if (!thread) return;
-    if (thread.consultingWithThreadId) {
-      updateThread(selectedId, { status: 'ended' });
-      updateThread(thread.consultingWithThreadId, { status: 'active' });
-      setSelectedId(thread.consultingWithThreadId);
-      return;
+    // Clean up any consult leg that's attached to this customer call
+    const consultThread = threads.find(t => t.type === 'internal-call' && t.consultingWithThreadId === selectedId);
+    if (consultThread) {
+      setThreads(prev => prev.filter(t => t.id !== consultThread.id));
     }
     updateThread(selectedId, { status: 'wrap-up', wrapUpStartedAt: Date.now() });
     setSelectedId(null);
+  };
+
+  const handleEndConsult = () => {
+    if (!selectedId) return;
+    const consultThread = threads.find(t => t.type === 'internal-call' && t.consultingWithThreadId === selectedId);
+    if (!consultThread) return;
+    setThreads(prev => prev.filter(t => t.id !== consultThread.id));
+    updateThread(selectedId, { status: 'active' });
   };
 
   const handleConsult = (entry: DirectoryEntry) => {
@@ -623,7 +630,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
       consultingWithThreadId: selectedId,
     };
     setThreads(prev => [...prev, consultThread]);
-    setSelectedId(consultId);
+    // Stay on the customer thread — consult is embedded in the same panel
     setActivePanel(null);
   };
 
@@ -647,11 +654,10 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
 
   const handleWarmTransfer = () => {
     if (!selectedId) return;
-    const consultThread = threads.find(t => t.id === selectedId);
-    if (!consultThread?.consultingWithThreadId) return;
-    const customerThreadId = consultThread.consultingWithThreadId;
-    updateThread(customerThreadId, { status: 'transferred' });
-    updateThread(selectedId, { status: 'ended' });
+    const consultThread = threads.find(t => t.type === 'internal-call' && t.consultingWithThreadId === selectedId);
+    if (!consultThread) return;
+    updateThread(selectedId, { status: 'transferred' });
+    setThreads(prev => prev.filter(t => t.id !== consultThread.id));
     setSelectedId(null);
     setView('list');
   };
@@ -779,11 +785,11 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
           />
           {selectedThread ? (
             <SLOTS.ConversationPanel
-              thread={selectedThread} consultingWithThread={consultingWithThread}
+              thread={selectedThread} consultCall={consultCallForCustomer}
               composerText={composerText} muted={muted}
               onComposerChange={setComposerText} onSendMessage={handleSendMessage}
               onHoldToggle={handleHoldToggle} onMuteToggle={() => { if (effectiveSelectedId) updateThread(effectiveSelectedId, { muted: !muted }); }}
-              onEndCall={handleEndCall} onWarmTransfer={handleWarmTransfer}
+              onEndCall={handleEndCall} onEndConsult={handleEndConsult} onWarmTransfer={handleWarmTransfer}
               onOpenDirectory={() => setActivePanel('directory')}
               onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
               onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
@@ -887,7 +893,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
         {selectedThread ? (
           <SLOTS.ConversationPanel
             thread={selectedThread}
-            consultingWithThread={consultingWithThread}
+            consultCall={consultCallForCustomer}
             composerText={composerText}
             muted={muted}
             onComposerChange={setComposerText}
@@ -895,6 +901,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             onHoldToggle={handleHoldToggle}
             onMuteToggle={() => { if (effectiveSelectedId) updateThread(effectiveSelectedId, { muted: !muted }); }}
             onEndCall={handleEndCall}
+            onEndConsult={handleEndConsult}
             onWarmTransfer={handleWarmTransfer}
             onOpenDirectory={() => setActivePanel('directory')}
             onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
