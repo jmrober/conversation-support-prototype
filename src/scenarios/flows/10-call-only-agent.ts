@@ -5,16 +5,15 @@ export function getCallOnlyAgentFlow(): ScenarioFlow {
 
   // ── Call states ───────────────────────────────────────────────────────────
 
-  const activeCall = {
+  const ringingCall = {
     id: 's10-call-1',
     type: 'customer-call' as const,
-    status: 'active' as const,
+    status: 'ringing' as const,
     participantName: 'James Okafor',
     participantPhone: '+44 7911 223344',
     issueTag: 'Billing Dispute',
     caseId: 'CS-7712',
     callDirection: 'inbound' as const,
-    callStartedAt: now - 3 * 60_000,
     transferSuggestion: 'Billing Support Queue',
     sentiment: 'negative' as const,
     accountTier: 'premium' as const,
@@ -22,6 +21,12 @@ export function getCallOnlyAgentFlow(): ScenarioFlow {
     timestamp: '09:31',
     unreadCount: 0,
     messages: [],
+  };
+
+  const activeCall = {
+    ...ringingCall,
+    status: 'active' as const,
+    callStartedAt: now - 3 * 60_000,
   };
 
   const callOnHold = {
@@ -44,9 +49,15 @@ export function getCallOnlyAgentFlow(): ScenarioFlow {
     description: 'Call-only agent receives one inbound call at a time. This scenario walks through the full call lifecycle: active call, placing on hold, and warm-transferring to a specialist queue.',
     steps: [
       {
+        id: 'call-ringing',
+        label: 'Inbound call ringing',
+        hint: 'James Okafor is calling in about a billing dispute. The inbound alert is showing — agent must accept or reject within 30 seconds.',
+        threads: [ringingCall],
+      },
+      {
         id: 'call-active',
-        label: 'Inbound call — active',
-        hint: 'James Okafor has called in about a billing dispute (3 min in). Premium account, negative sentiment. Agent has full call controls: hold, mute, consult, transfer.',
+        label: 'Call accepted — active',
+        hint: 'Agent accepted the call. James Okafor is now live — 3 minutes in, premium account, negative sentiment. Full call controls available.',
         threads: [activeCall],
         initialSelectedId: 's10-call-1',
         initialView: 'detail',
