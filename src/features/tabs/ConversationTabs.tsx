@@ -40,19 +40,6 @@ function formatMs(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-function parseTimestampToEpoch(timestamp: string): number | null {
-  // Handles "H:MM", "HH:MM", "H:MM AM/PM", "HH:MM AM/PM"
-  const [rawTime, period] = timestamp.trim().split(' ');
-  if (!rawTime) return null;
-  const [hStr, mStr] = rawTime.split(':');
-  let h = parseInt(hStr, 10);
-  const m = parseInt(mStr, 10);
-  if (isNaN(h) || isNaN(m)) return null;
-  if (period === 'PM' && h !== 12) h += 12;
-  if (period === 'AM' && h === 12) h = 0;
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0).getTime();
-}
 
 function useElapsed(thread: Thread): string {
   const [now, setNow] = useState(Date.now());

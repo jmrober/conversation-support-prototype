@@ -397,7 +397,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [composerText, setComposerText] = useState('');
   const [wrapUpActive, setWrapUpActive] = useState(false);
-  const [wrapUpContext, setWrapUpContext] = useState<{ participantName?: string; issueTag?: string } | null>(null);
   const [directoryIntent, setDirectoryIntent] = useState<'outbound' | 'internal-chat'>('outbound');
   const [railExpanded, setRailExpanded] = useState(false);
   const [assistTab, setAssistTab] = useState<'suggested' | 'library'>('suggested');
@@ -437,10 +436,8 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
       if (step.initialWrapUpActive) {
         setWrapUpActive(true);
         setPresence('wrap-up');
-        setWrapUpContext(step.initialWrapUpContext ?? null);
       } else {
         setWrapUpActive(false);
-        setWrapUpContext(null);
       }
       // Show toast for any thread that starts with unread messages and isn't the selected one
       const effectiveSelected = initialSelected ?? step.threads[0]?.id ?? null;
@@ -486,7 +483,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
 
   const handleWrapUpEnd = () => {
     setWrapUpActive(false);
-    setWrapUpContext(null);
     setPresence('available');
   };
 
@@ -550,10 +546,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   };
 
   const handleSelectThread = (id: string) => {
-    const leaving = threads.find(th => th.id === effectiveSelectedId);
-    const arriving = threads.find(th => th.id === id);
-    const isCall = (t?: typeof leaving) => t?.type === 'customer-call' || t?.type === 'internal-call';
-
     setSelectedId(id);
     setView('detail');
     setActivePanel(null);
@@ -608,7 +600,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
       setSelectedId(thread.consultingWithThreadId);
       return;
     }
-    setWrapUpContext({ participantName: thread.participantName, issueTag: thread.issueTag });
     updateThread(selectedId, { status: 'wrap-up', wrapUpStartedAt: Date.now() });
     setSelectedId(null);
     setWrapUpActive(true);
@@ -800,7 +791,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
           <SLOTS.ConversationTabs
             threads={tabThreads}
             selectedId={effectiveSelectedId}
-            muted={muted}
             onSelect={handleSelectThread}
             onNewConversation={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
           />
@@ -906,7 +896,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
         />
 
         {/* Wrap-up progress strip */}
-        {wrapUpActive && !showWrapUpOverlay && (
+        {wrapUpActive && (
           <div className="flex items-center gap-3 px-4 py-2 bg-yellow-50 border-b border-yellow-200 flex-shrink-0">
             <div className="flex-1">
               <div className="flex items-center justify-between mb-1">

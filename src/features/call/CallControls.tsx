@@ -13,14 +13,6 @@ const CALL_CONTEXT = {
   ivrSummary: 'Customer called about a software issue with their purchased product. Unable to complete initial setup.',
 };
 
-const PRODUCT_INFO = [
-  { label: 'Product name',          value: 'ProBook X1' },
-  { label: 'Product type',          value: 'Computer' },
-  { label: 'Manufacturer warranty', value: 'No' },
-  { label: 'Coverage start date',   value: 'N/A' },
-  { label: 'Protection plan',       value: 'No' },
-  { label: 'Return eligibility',    value: 'No' },
-];
 
 interface Props {
   thread: Thread;

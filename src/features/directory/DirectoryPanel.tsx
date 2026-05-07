@@ -17,12 +17,6 @@ interface Props {
   transferSuggestion?: string;
 }
 
-const HEADER_LABEL: Record<string, string> = {
-  outbound:        'New Call',
-  'active-call':   'Transfer Call',
-  'internal-chat': 'New Message',
-  'chat-transfer': 'Transfer Chat',
-};
 
 export default function DirectoryPanel({
   mode,
