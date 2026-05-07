@@ -397,7 +397,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [composerText, setComposerText] = useState('');
   const [wrapUpActive, setWrapUpActive] = useState(false);
-  const [directoryIntent, setDirectoryIntent] = useState<'outbound' | 'internal-chat'>('outbound');
+  const [directoryIntent, setDirectoryIntent] = useState<'outbound' | 'internal-chat' | 'consult'>('outbound');
   const [railExpanded, setRailExpanded] = useState(false);
   const [assistTab, setAssistTab] = useState<'suggested' | 'library'>('suggested');
   const [presentationMode, setPresentationMode] = useState(false);
@@ -505,6 +505,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   const tabThreads = threads.filter(
     t => t.status !== 'ended' && t.status !== 'transferred' && t.status !== 'ringing'
       && !(t.type === 'internal-call' && !!t.consultingWithThreadId)
+      && !(t.type === 'customer-call' && !!t.relatedChatId)
   );
 
   const activeChatCount = threads.filter(
@@ -530,7 +531,14 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     ? (threads.find(t => t.id === selectedThread.relatedChatId) ?? null)
     : null;
 
-  const directoryMode = anyActiveCall ? 'active-call' : directoryIntent;
+  // When viewing a chat, find any active outbound call linked to it
+  const relatedCallForChat = (selectedThread?.type === 'customer-chat' || selectedThread?.type === 'internal-chat')
+    ? (threads.find(t => t.type === 'customer-call' && t.relatedChatId === selectedThread.id && t.status !== 'ended' && t.status !== 'transferred') ?? null)
+    : null;
+
+  const directoryMode = directoryIntent === 'consult' ? 'consult'
+    : anyActiveCall ? 'active-call'
+    : directoryIntent;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const updateThread = (id: string, updates: Partial<Thread>) =>
@@ -611,6 +619,24 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     updateThread(selectedId, { status: 'active' });
   };
 
+  const handleEndRelatedCall = () => {
+    if (!relatedCallForChat) return;
+    updateThread(relatedCallForChat.id, { status: 'ended' });
+    setThreads(prev => prev.filter(t => t.id !== relatedCallForChat.id));
+  };
+
+  const handleHoldRelatedCallToggle = () => {
+    if (!relatedCallForChat) return;
+    updateThread(relatedCallForChat.id, {
+      status: relatedCallForChat.status === 'on-hold' ? 'active' : 'on-hold',
+    });
+  };
+
+  const handleMuteRelatedCallToggle = () => {
+    if (!relatedCallForChat) return;
+    updateThread(relatedCallForChat.id, { muted: !relatedCallForChat.muted });
+  };
+
   const handleConsult = (entry: DirectoryEntry) => {
     if (!selectedId) return;
     updateThread(selectedId, { status: 'consulting' });
@@ -653,6 +679,8 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   };
 
   const handleOutboundCall = (entry: DirectoryEntry) => {
+    const fromChatId = selectedThread?.type === 'customer-chat' || selectedThread?.type === 'internal-chat'
+      ? selectedThread.id : undefined;
     const callId = `call-${Date.now()}`;
     setThreads(prev => [...prev, {
       id: callId,
@@ -666,13 +694,15 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
       messages: [],
       callDirection: 'outbound',
       callStartedAt: Date.now(),
+      ...(fromChatId ? { relatedChatId: fromChatId } : {}),
     }]);
-    setSelectedId(callId);
-    setView('detail');
+    if (!fromChatId) { setSelectedId(callId); setView('detail'); }
     setActivePanel(null);
   };
 
   const handleDialNumber = (number: string, name?: string, fromChatId?: string) => {
+    const chatId = fromChatId
+      ?? ((selectedThread?.type === 'customer-chat' || selectedThread?.type === 'internal-chat') ? selectedThread.id : undefined);
     const callId = `call-${Date.now()}`;
     setThreads(prev => [...prev, {
       id: callId,
@@ -686,10 +716,9 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
       messages: [],
       callDirection: 'outbound',
       callStartedAt: Date.now(),
-      ...(fromChatId ? { relatedChatId: fromChatId } : {}),
+      ...(chatId ? { relatedChatId: chatId } : {}),
     }]);
-    setSelectedId(callId);
-    setView('detail');
+    if (!chatId) { setSelectedId(callId); setView('detail'); }
     setActivePanel(null);
   };
 
@@ -781,6 +810,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               onHoldToggle={handleHoldToggle} onMuteToggle={() => { if (effectiveSelectedId) updateThread(effectiveSelectedId, { muted: !muted }); }}
               onEndCall={handleEndCall} onEndConsult={handleEndConsult}
               onOpenDirectory={() => setActivePanel('directory')}
+              onOpenConsult={() => { setDirectoryIntent('consult'); setActivePanel('directory'); }}
               onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
               onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
               onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
@@ -789,6 +819,10 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
                 : undefined}
               relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
               onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
+              relatedCall={relatedCallForChat}
+              onEndRelatedCall={relatedCallForChat ? handleEndRelatedCall : undefined}
+              onHoldRelatedCallToggle={relatedCallForChat ? handleHoldRelatedCallToggle : undefined}
+              onMuteRelatedCallToggle={relatedCallForChat ? handleMuteRelatedCallToggle : undefined}
             />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
@@ -821,7 +855,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               mode={directoryMode} activeCustomerCall={activeCustomerCall}
               onConsult={handleConsult} onTransfer={handleColdTransfer} onOutboundCall={handleOutboundCall}
               onStartInternalChat={handleStartInternalChat} onDialNumber={handleDialNumber}
-              onClose={() => setActivePanel(null)}
+              onClose={() => { setActivePanel(null); setDirectoryIntent('outbound'); }}
               transferSuggestion={directoryMode === 'active-call' ? customerCall?.transferSuggestion : undefined}
             />
           )}
@@ -829,7 +863,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             <SLOTS.ResponseAssistPanel
               thread={selectedThread} initialTab={assistTab}
               onInsert={text => { setComposerText(text); setActivePanel(null); }}
-              onClose={() => setActivePanel(null)}
+              onClose={() => { setActivePanel(null); setDirectoryIntent('outbound'); }}
             />
           )}
           {toastThread && (
@@ -893,6 +927,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             onEndCall={handleEndCall}
             onEndConsult={handleEndConsult}
             onOpenDirectory={() => setActivePanel('directory')}
+            onOpenConsult={() => { setDirectoryIntent('consult'); setActivePanel('directory'); }}
             onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
             onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
             onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
@@ -901,6 +936,10 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               : undefined}
             relatedChat={selectedIsCall ? selectedCallRelatedChat : null}
             onSwitchToChat={selectedIsCall && selectedCallRelatedChat ? () => handleSelectThread(selectedCallRelatedChat.id) : undefined}
+            relatedCall={relatedCallForChat}
+            onEndRelatedCall={relatedCallForChat ? handleEndRelatedCall : undefined}
+            onHoldRelatedCallToggle={relatedCallForChat ? handleHoldRelatedCallToggle : undefined}
+            onMuteRelatedCallToggle={relatedCallForChat ? handleMuteRelatedCallToggle : undefined}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">

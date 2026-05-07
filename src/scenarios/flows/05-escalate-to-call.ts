@@ -70,6 +70,8 @@ export function getEscalateToCallFlow(): ScenarioFlow {
         label: 'Agent escalates to call',
         hint: 'Agent calls Sophie directly — chat stays open. The phone call allows for faster resolution and a more personal touch for Gold tier.',
         threads: [chatThread, outboundCallThread],
+        initialSelectedId: 's4-chat',
+        initialView: 'detail' as const,
       },
     ],
   };

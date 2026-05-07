@@ -7,6 +7,19 @@ import CallControls from '../call/CallControls';
 import ShareCartPanel from './ShareCartPanel';
 import ContextStrip from './ContextStrip';
 
+function useCallElapsed(startedAt?: number): string {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!startedAt) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [startedAt]);
+  if (!startedAt) return '--:--';
+  const s = Math.max(0, Math.floor((now - startedAt) / 1000));
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, '0')}`;
+}
+
 interface Props {
   thread: Thread;
   consultCall?: Thread | null;
@@ -20,12 +33,17 @@ interface Props {
   onEndCall: () => void;
   onEndConsult?: () => void;
   onOpenDirectory: () => void;
+  onOpenConsult?: () => void;
   onOpenResponseAssist: (tab: 'suggested' | 'library') => void;
   onOpenChatTransfer?: () => void;
   onStartCall?: (phone: string) => void;
   onEndChat?: () => void;
   relatedChat?: Thread | null;
   onSwitchToChat?: () => void;
+  relatedCall?: Thread | null;
+  onEndRelatedCall?: () => void;
+  onHoldRelatedCallToggle?: () => void;
+  onMuteRelatedCallToggle?: () => void;
 }
 
 // ── Summary generation ────────────────────────────────────────────────────────
@@ -124,11 +142,16 @@ export default function ConversationPanel({
   onEndCall,
   onEndConsult,
   onOpenDirectory,
+  onOpenConsult,
   onOpenChatTransfer,
   onStartCall,
   onEndChat,
   relatedChat,
   onSwitchToChat,
+  relatedCall,
+  onEndRelatedCall,
+  onHoldRelatedCallToggle,
+  onMuteRelatedCallToggle,
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -234,6 +257,7 @@ export default function ConversationPanel({
   const isCall = thread.type === 'customer-call' || thread.type === 'internal-call';
   const isChat = thread.type === 'customer-chat' || thread.type === 'internal-chat';
   const isConsulting = isCall && !!consultCall;
+  const callElapsed = useCallElapsed(relatedCall?.callStartedAt);
 
   const TONES: { key: Tone; label: string }[] = [
     { key: 'balanced', label: 'Balanced' },
@@ -459,11 +483,68 @@ export default function ConversationPanel({
           onRequestEndCall={isConsulting ? () => setEndCallConfirm(true) : undefined}
           onEndConsult={onEndConsult}
           onOpenDirectory={onOpenDirectory}
+          onOpenConsult={onOpenConsult}
           relatedChat={relatedChat}
           onSwitchToChat={onSwitchToChat}
         />
       ) : isChat ? (
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+
+          {/* ── Active call strip (when outbound call is linked to this chat) ── */}
+          {relatedCall && (
+            <>
+              <div className="px-4 pt-4 pb-3 flex-shrink-0 bg-white">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="min-w-0">
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-blue-700 mb-1">Call Active · {callElapsed}</div>
+                    <div className="text-[15px] font-semibold text-gray-900 leading-tight">{relatedCall.participantName}</div>
+                    {relatedCall.participantPhone && (
+                      <div className="text-[12px] font-mono text-gray-500 mt-0.5 tracking-wide">{relatedCall.participantPhone}</div>
+                    )}
+                  </div>
+                  <button
+                    onClick={onEndRelatedCall}
+                    className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+                  >
+                    End Call
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={onHoldRelatedCallToggle}
+                    className={cn(
+                      'flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg transition-colors',
+                      relatedCall.status === 'on-hold'
+                        ? 'bg-slate-600 text-white hover:bg-slate-700'
+                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    )}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      {relatedCall.status === 'on-hold'
+                        ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6" />}
+                    </svg>
+                    <span className="text-[11px] font-medium leading-none">{relatedCall.status === 'on-hold' ? 'Resume' : 'Hold'}</span>
+                  </button>
+                  <button
+                    onClick={onMuteRelatedCallToggle}
+                    className={cn(
+                      'flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg transition-colors',
+                      relatedCall.muted ? 'bg-gray-800 text-white hover:bg-gray-900' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                    )}
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      {relatedCall.muted
+                        ? <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" /></>
+                        : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />}
+                    </svg>
+                    <span className="text-[11px] font-medium leading-none">{relatedCall.muted ? 'Unmute' : 'Mute'}</span>
+                  </button>
+                </div>
+              </div>
+              <div className="border-t border-gray-100" />
+            </>
+          )}
 
           {/* ── Scrollable region: sentiment + messages only ── */}
           <div className="flex-1 min-h-0 overflow-y-auto flex flex-col bg-gray-50">

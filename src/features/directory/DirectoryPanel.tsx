@@ -4,7 +4,7 @@ import { mockDirectory } from '../../data/mockDirectory';
 import { cn } from '../../utils/cn';
 
 interface Props {
-  mode: 'outbound' | 'active-call' | 'internal-chat' | 'chat-transfer';
+  mode: 'outbound' | 'active-call' | 'consult' | 'internal-chat' | 'chat-transfer';
   activeCustomerCall: Thread | null;
   onConsult: (entry: DirectoryEntry) => void;
   onTransfer: (entry: DirectoryEntry) => void;
@@ -21,6 +21,7 @@ interface Props {
 export default function DirectoryPanel({
   mode,
   activeCustomerCall,
+  onConsult,
   onDialNumber,
   onStartInternalChat,
   onClose,
@@ -31,6 +32,7 @@ export default function DirectoryPanel({
   const [phonebookOpen, setPhonebookOpen] = useState(false);
 
   const isTransfer = mode === 'active-call';
+  const isConsultMode = mode === 'consult';
   const showTabs = mode === 'outbound';
   const accentRing = isTransfer ? 'focus:ring-blue-300' : 'focus:ring-green-300';
   const actionBg   = isTransfer ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700';
@@ -57,6 +59,63 @@ export default function DirectoryPanel({
           Back
         </button>
       </div>
+
+      {/* Consult mode — agent list with Consult buttons */}
+      {isConsultMode && (
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="px-4 pt-4 pb-2 flex-shrink-0">
+            <p className="text-[11px] text-gray-500 mb-3">
+              {activeCustomerCall
+                ? <>Select an agent to consult while <span className="font-semibold text-gray-700">{activeCustomerCall.participantName}</span> is on hold.</>
+                : 'Select an agent to consult.'}
+            </p>
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search by name, team, or role…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                autoFocus
+                className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-8">No results</p>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {filtered.map(entry => (
+                  <button
+                    key={entry.id}
+                    onClick={() => onConsult(entry)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-blue-50 transition-colors text-left group"
+                  >
+                    <div className={cn(
+                      'w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0',
+                      entry.available ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                    )}>
+                      {entry.initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 leading-tight">{entry.name}</div>
+                      <div className="text-[11px] text-gray-400 truncate">{entry.role} · {entry.department}</div>
+                    </div>
+                    <span className="text-[11px] font-semibold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">Consult</span>
+                    <div className={cn(
+                      'w-2 h-2 rounded-full flex-shrink-0',
+                      entry.available ? 'bg-green-400' : 'bg-gray-300'
+                    )} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tab switcher — only in outbound mode */}
       {showTabs && (
@@ -87,7 +146,7 @@ export default function DirectoryPanel({
       )}
 
       {/* Dial tab */}
-      {(!showTabs || tab === 'dial') && (
+      {!isConsultMode && (!showTabs || tab === 'dial') && (
         <div className="flex-1 flex flex-col px-5 pt-6 pb-8 gap-4">
           {isTransfer && activeCustomerCall && (
             <p className="text-[11px] text-gray-500 leading-snug">
@@ -161,7 +220,7 @@ export default function DirectoryPanel({
       )}
 
       {/* Message tab */}
-      {showTabs && tab === 'message' && (
+      {!isConsultMode && showTabs && tab === 'message' && (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="px-4 pt-4 pb-2 flex-shrink-0">
             <div className="relative">

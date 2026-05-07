@@ -80,7 +80,7 @@ export function getChatAndCallAgentFlow(): ScenarioFlow {
         label: 'Outbound call started from chat',
         hint: 'Agent dialled Sofia from the chat — the call is linked to the originating chat. Both the chat and call are live simultaneously. Agent can switch between them.',
         threads: [outboundCall, chatDuringCall],
-        initialSelectedId: 's9-call-1',
+        initialSelectedId: CHAT_ID,
         initialView: 'detail',
       },
     ],
