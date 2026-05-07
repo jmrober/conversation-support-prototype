@@ -602,8 +602,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     }
     updateThread(selectedId, { status: 'wrap-up', wrapUpStartedAt: Date.now() });
     setSelectedId(null);
-    setWrapUpActive(true);
-    setPresence('wrap-up');
   };
 
   const handleConsult = (entry: DirectoryEntry) => {
@@ -773,21 +771,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             onToggleExpand={() => setRailExpanded(e => !e)}
           />
 
-          {wrapUpActive && (
-            <div className="flex items-center gap-3 px-4 py-2 bg-yellow-50 border-b border-yellow-200 flex-shrink-0">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-semibold text-yellow-800">Wrap-Up · not accepting new contacts</span>
-                  <span className="text-[11px] font-bold tabular-nums text-yellow-800">{wrapUpSecondsLeft}s</span>
-                </div>
-                <div className="w-full h-1 bg-yellow-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-yellow-500 rounded-full transition-all duration-1000" style={{ width: `${(wrapUpSecondsLeft / 30) * 100}%` }} />
-                </div>
-              </div>
-              <button onClick={handleWrapUpEnd} className="text-[10px] font-semibold text-yellow-700 hover:text-yellow-900 flex-shrink-0 transition-colors">Skip</button>
-            </div>
-          )}
-
           <SLOTS.ConversationTabs
             threads={tabThreads}
             selectedId={effectiveSelectedId}
@@ -824,8 +807,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               </div>
               <button
                 onClick={() => { setDirectoryIntent('outbound'); setActivePanel('directory'); }}
-                disabled={wrapUpActive}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-700 rounded-xl hover:bg-blue-800 disabled:opacity-40 transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-700 rounded-xl hover:bg-blue-800 transition-colors"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
@@ -895,23 +877,6 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
           onToggleExpand={() => setRailExpanded(e => !e)}
         />
 
-        {/* Wrap-up progress strip */}
-        {wrapUpActive && (
-          <div className="flex items-center gap-3 px-4 py-2 bg-yellow-50 border-b border-yellow-200 flex-shrink-0">
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-semibold text-yellow-800">Wrap-Up · not accepting new contacts</span>
-                <span className="text-[11px] font-bold tabular-nums text-yellow-800">{wrapUpSecondsLeft}s</span>
-              </div>
-              <div className="w-full h-1 bg-yellow-200 rounded-full overflow-hidden">
-                <div className="h-full bg-yellow-500 rounded-full transition-all duration-1000" style={{ width: `${(wrapUpSecondsLeft / 30) * 100}%` }} />
-              </div>
-            </div>
-            <button onClick={handleWrapUpEnd} className="text-[10px] font-semibold text-yellow-700 hover:text-yellow-900 flex-shrink-0 transition-colors">
-              Skip
-            </button>
-          </div>
-        )}
 
         {/* Main view — tab bar always visible, content pane below */}
         <SLOTS.ConversationTabs
