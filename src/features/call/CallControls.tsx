@@ -36,7 +36,7 @@ interface Props {
   onRequestEndCall?: () => void;
   onEndConsult?: () => void;
   onOpenDirectory: () => void;
-  onOpenConsult?: () => void;
+  onConsult?: () => void;
   relatedChat?: Thread | null;
   onSwitchToChat?: () => void;
 }
@@ -62,7 +62,7 @@ export default function CallControls({
   onRequestEndCall,
   onEndConsult,
   onOpenDirectory,
-  onOpenConsult,
+  onConsult,
   relatedChat,
   onSwitchToChat,
 }: Props) {
@@ -179,7 +179,7 @@ export default function CallControls({
                 <span className="text-[11px] font-medium leading-none">{muted ? 'Unmute' : 'Mute'}</span>
               </button>
               <button
-                onClick={onOpenConsult ?? onOpenDirectory}
+                onClick={onConsult ?? onOpenDirectory}
                 className="flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -299,7 +299,7 @@ export default function CallControls({
             </button>
 
             <button
-              onClick={onOpenConsult ?? onOpenDirectory}
+              onClick={onConsult ?? onOpenDirectory}
               title="Start a consult call"
               className="flex-1 flex flex-col items-center justify-center gap-1 h-11 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors"
             >

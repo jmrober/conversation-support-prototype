@@ -397,7 +397,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   const [activePanel, setActivePanel] = useState<PanelType>(null);
   const [composerText, setComposerText] = useState('');
   const [wrapUpActive, setWrapUpActive] = useState(false);
-  const [directoryIntent, setDirectoryIntent] = useState<'outbound' | 'internal-chat' | 'consult'>('outbound');
+  const [directoryIntent, setDirectoryIntent] = useState<'outbound' | 'internal-chat'>('outbound');
   const [railExpanded, setRailExpanded] = useState(false);
   const [assistTab, setAssistTab] = useState<'suggested' | 'library'>('suggested');
   const [presentationMode, setPresentationMode] = useState(false);
@@ -536,9 +536,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
     ? (threads.find(t => t.type === 'customer-call' && t.relatedChatId === selectedThread.id && t.status !== 'ended' && t.status !== 'transferred') ?? null)
     : null;
 
-  const directoryMode = directoryIntent === 'consult' ? 'consult'
-    : anyActiveCall ? 'active-call'
-    : directoryIntent;
+  const directoryMode = anyActiveCall ? 'active-call' : directoryIntent;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const updateThread = (id: string, updates: Partial<Thread>) =>
@@ -810,7 +808,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
               onHoldToggle={handleHoldToggle} onMuteToggle={() => { if (effectiveSelectedId) updateThread(effectiveSelectedId, { muted: !muted }); }}
               onEndCall={handleEndCall} onEndConsult={handleEndConsult}
               onOpenDirectory={() => setActivePanel('directory')}
-              onOpenConsult={() => { setDirectoryIntent('consult'); setActivePanel('directory'); }}
+              onConsult={() => handleConsult({ id: 'mock-consultant', name: 'Sarah Chen', role: 'Billing Specialist', department: 'Finance', extension: '', initials: 'SC', available: true })}
               onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
               onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
               onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}
@@ -927,7 +925,7 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
             onEndCall={handleEndCall}
             onEndConsult={handleEndConsult}
             onOpenDirectory={() => setActivePanel('directory')}
-            onOpenConsult={() => { setDirectoryIntent('consult'); setActivePanel('directory'); }}
+            onConsult={() => handleConsult({ id: 'mock-consultant', name: 'Sarah Chen', role: 'Billing Specialist', department: 'Finance', extension: '', initials: 'SC', available: true })}
             onOpenResponseAssist={tab => { setAssistTab(tab); setActivePanel('responseassist'); }}
             onOpenChatTransfer={selectedThread?.type === 'customer-chat' ? () => setActivePanel('chat-transfer') : undefined}
             onEndChat={selectedThread && (selectedThread.type === 'customer-chat' || selectedThread.type === 'internal-chat') ? handleEndChat : undefined}

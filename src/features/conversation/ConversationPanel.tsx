@@ -33,7 +33,7 @@ interface Props {
   onEndCall: () => void;
   onEndConsult?: () => void;
   onOpenDirectory: () => void;
-  onOpenConsult?: () => void;
+  onConsult?: () => void;
   onOpenResponseAssist: (tab: 'suggested' | 'library') => void;
   onOpenChatTransfer?: () => void;
   onStartCall?: (phone: string) => void;
@@ -142,7 +142,7 @@ export default function ConversationPanel({
   onEndCall,
   onEndConsult,
   onOpenDirectory,
-  onOpenConsult,
+  onConsult,
   onOpenChatTransfer,
   onStartCall,
   onEndChat,
@@ -483,7 +483,7 @@ export default function ConversationPanel({
           onRequestEndCall={isConsulting ? () => setEndCallConfirm(true) : undefined}
           onEndConsult={onEndConsult}
           onOpenDirectory={onOpenDirectory}
-          onOpenConsult={onOpenConsult}
+          onConsult={onConsult}
           relatedChat={relatedChat}
           onSwitchToChat={onSwitchToChat}
         />
