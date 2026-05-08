@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import { getFlows, type ScenarioFlow } from '../scenarios';
+import FlowDiagramModal from '../features/diagram/FlowDiagramModal';
 
 interface Props {
   onSelectFlow: (id: string) => void;
@@ -10,48 +11,129 @@ const sans: CSSProperties = { fontFamily: '-apple-system, BlinkMacSystemFont, "I
 
 // ── Scenario Card ─────────────────────────────────────────────────────────────
 
-function ScenarioCard({ flow, index, onClick }: { flow: ScenarioFlow; index: number; onClick: () => void }) {
+function ScenarioCard({
+  flow,
+  index,
+  onClick,
+  onViewDiagram,
+}: {
+  flow: ScenarioFlow;
+  index: number;
+  onClick: () => void;
+  onViewDiagram: () => void;
+}) {
   const [hovered, setHovered] = useState(false);
+  const [diagramHovered, setDiagramHovered] = useState(false);
   const idStr = String(index + 1).padStart(2, '0');
 
   return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <div
       style={{
-        display: 'block',
-        width: '100%',
-        textAlign: 'left',
+        position: 'relative',
         border: `1px solid ${hovered ? '#a3a3a3' : '#e5e5e5'}`,
         backgroundColor: '#ffffff',
-        cursor: 'pointer',
         transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
         boxShadow: hovered ? '0 8px 32px rgba(0,0,0,0.10)' : '0 1px 4px rgba(0,0,0,0.04)',
         overflow: 'hidden',
-        padding: '22px 24px 20px',
-        ...sans,
       }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
-          <span style={{ ...mono, fontSize: 11, color: '#a3a3a3', letterSpacing: '0.05em', flexShrink: 0 }}>{idStr}</span>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#171717', lineHeight: 1.3, margin: 0, letterSpacing: '-0.01em' }}>{flow.title}</h3>
+      {/* Clickable main area */}
+      <button
+        onClick={onClick}
+        style={{
+          display: 'block',
+          width: '100%',
+          textAlign: 'left',
+          border: 'none',
+          backgroundColor: 'transparent',
+          cursor: 'pointer',
+          padding: '22px 24px 14px',
+          ...sans,
+        }}
+      >
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
+            <span style={{ ...mono, fontSize: 11, color: '#a3a3a3', letterSpacing: '0.05em', flexShrink: 0 }}>{idStr}</span>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#171717', lineHeight: 1.3, margin: 0, letterSpacing: '-0.01em' }}>{flow.title}</h3>
+          </div>
+          <p style={{ fontSize: 12, color: '#737373', lineHeight: 1.6, margin: 0 }}>{flow.description}</p>
         </div>
-        <p style={{ fontSize: 12, color: '#737373', lineHeight: 1.6, margin: 0 }}>{flow.description}</p>
-      </div>
+      </button>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTop: '1px solid #f3f4f6' }}>
+      {/* Footer row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 24px 18px',
+        borderTop: '1px solid #f3f4f6',
+      }}>
+        {/* Step dots */}
         <div style={{ display: 'flex', gap: 4 }}>
           {flow.steps.map((_, i) => (
-            <div key={i} style={{ width: i === 0 ? 16 : 6, height: 5, borderRadius: 3, backgroundColor: i === 0 ? '#171717' : '#e5e5e5', transition: 'width 0.2s' }} />
+            <div
+              key={i}
+              style={{
+                width: i === 0 ? 16 : 6,
+                height: 5, borderRadius: 3,
+                backgroundColor: i === 0 ? '#171717' : '#e5e5e5',
+              }}
+            />
           ))}
         </div>
-        <span style={{ ...mono, fontSize: 11, color: hovered ? '#171717' : '#a3a3a3', letterSpacing: '0.04em', transition: 'color 0.15s' }}>
-          Launch →
-        </span>
+
+        {/* Actions row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* View Flow link */}
+          <button
+            onClick={e => { e.stopPropagation(); onViewDiagram(); }}
+            onMouseEnter={() => setDiagramHovered(true)}
+            onMouseLeave={() => setDiagramHovered(false)}
+            style={{
+              border: 'none',
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              padding: 0,
+              display: 'flex', alignItems: 'center', gap: 5,
+              ...mono,
+              fontSize: 11,
+              color: diagramHovered ? '#171717' : '#a3a3a3',
+              letterSpacing: '0.04em',
+              transition: 'color 0.15s',
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <path d="M17.5 14v3m0 0v3m0-3h-3m3 0h3" />
+            </svg>
+            VIEW FLOW
+          </button>
+
+          {/* Divider */}
+          <div style={{ width: 1, height: 12, backgroundColor: '#e5e5e5' }} />
+
+          {/* Launch link */}
+          <button
+            onClick={onClick}
+            style={{
+              border: 'none',
+              backgroundColor: 'transparent',
+              cursor: 'pointer',
+              padding: 0,
+              ...mono,
+              fontSize: 11,
+              color: hovered ? '#171717' : '#a3a3a3',
+              letterSpacing: '0.04em',
+              transition: 'color 0.15s',
+            }}
+          >
+            Launch →
+          </button>
+        </div>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -59,6 +141,7 @@ function ScenarioCard({ flow, index, onClick }: { flow: ScenarioFlow; index: num
 
 export default function ScenariosPage({ onSelectFlow }: Props) {
   const flows = getFlows();
+  const [diagramFlow, setDiagramFlow] = useState<ScenarioFlow | null>(null);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f7f7f5', ...sans }}>
@@ -78,7 +161,6 @@ export default function ScenariosPage({ onSelectFlow }: Props) {
           </div>
           <span style={{ ...mono, fontSize: 12, fontWeight: 600, color: '#171717', letterSpacing: '0.02em' }}>WORKBENCH</span>
         </div>
-
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
           <span style={{ ...mono, fontSize: 11, color: '#a3a3a3', letterSpacing: '0.06em' }}>{flows.length} {flows.length === 1 ? 'SCENARIO' : 'SCENARIOS'}</span>
         </div>
@@ -100,6 +182,7 @@ export default function ScenariosPage({ onSelectFlow }: Props) {
             flow={flow}
             index={i}
             onClick={() => onSelectFlow(flow.id)}
+            onViewDiagram={() => setDiagramFlow(flow)}
           />
         ))}
       </div>
@@ -107,6 +190,16 @@ export default function ScenariosPage({ onSelectFlow }: Props) {
       <div style={{ padding: '20px 48px', borderTop: '1px solid #e5e5e5' }}>
         <span style={{ ...mono, fontSize: 10, color: '#a3a3a3', letterSpacing: '0.06em' }}>COMMUNICATION SUPPORT WORKBENCH · PROTOTYPE</span>
       </div>
+
+      {/* Flow diagram modal */}
+      {diagramFlow && (
+        <FlowDiagramModal
+          scenarioId={diagramFlow.id}
+          scenarioTitle={diagramFlow.title}
+          scenarioSubtitle={diagramFlow.subtitle ?? ''}
+          onClose={() => setDiagramFlow(null)}
+        />
+      )}
     </div>
   );
 }
