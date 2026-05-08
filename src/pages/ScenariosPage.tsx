@@ -1,9 +1,9 @@
 import { useState, type CSSProperties } from 'react';
-import { getFlows, type ScenarioFlow } from '../scenarios';
-import FlowDiagramModal from '../features/diagram/FlowDiagramModal';
+import { getFlows } from '../scenarios';
 
 interface Props {
   onSelectFlow: (id: string) => void;
+  onViewDiagram: (id: string) => void;
 }
 
 const mono: CSSProperties = { fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace' };
@@ -139,9 +139,8 @@ function ScenarioCard({
 
 // ── Scenarios Page ────────────────────────────────────────────────────────────
 
-export default function ScenariosPage({ onSelectFlow }: Props) {
+export default function ScenariosPage({ onSelectFlow, onViewDiagram }: Props) {
   const flows = getFlows();
-  const [diagramFlow, setDiagramFlow] = useState<ScenarioFlow | null>(null);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f7f7f5', ...sans }}>
@@ -182,7 +181,7 @@ export default function ScenariosPage({ onSelectFlow }: Props) {
             flow={flow}
             index={i}
             onClick={() => onSelectFlow(flow.id)}
-            onViewDiagram={() => setDiagramFlow(flow)}
+            onViewDiagram={() => onViewDiagram(flow.id)}
           />
         ))}
       </div>
@@ -191,15 +190,6 @@ export default function ScenariosPage({ onSelectFlow }: Props) {
         <span style={{ ...mono, fontSize: 10, color: '#a3a3a3', letterSpacing: '0.06em' }}>COMMUNICATION SUPPORT WORKBENCH · PROTOTYPE</span>
       </div>
 
-      {/* Flow diagram modal */}
-      {diagramFlow && (
-        <FlowDiagramModal
-          scenarioId={diagramFlow.id}
-          scenarioTitle={diagramFlow.title}
-          scenarioSubtitle={diagramFlow.subtitle ?? ''}
-          onClose={() => setDiagramFlow(null)}
-        />
-      )}
     </div>
   );
 }

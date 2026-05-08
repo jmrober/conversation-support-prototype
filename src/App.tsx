@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import ScenariosPage from './pages/ScenariosPage';
+import FlowPage from './pages/FlowPage';
 import Prototype from './prototype/Prototype';
+import { getFlow, type ScenarioFlow } from './scenarios';
 
-type AppPage = 'scenarios' | 'prototype';
+type AppPage = 'scenarios' | 'prototype' | 'flow-diagram';
 
 export default function App() {
   const [page, setPage] = useState<AppPage>('scenarios');
   const [flowId, setFlowId] = useState<string | null>(null);
+  const [diagramFlow, setDiagramFlow] = useState<ScenarioFlow | null>(null);
 
   useEffect(() => {
     document.body.classList.toggle('prototype-active', page === 'prototype');
@@ -17,8 +20,20 @@ export default function App() {
     setPage('prototype');
   };
 
+  const handleViewDiagram = (id: string) => {
+    const flow = getFlow(id);
+    if (flow) {
+      setDiagramFlow(flow);
+      setPage('flow-diagram');
+    }
+  };
+
   if (page === 'scenarios') {
-    return <ScenariosPage onSelectFlow={handleSelectFlow} />;
+    return <ScenariosPage onSelectFlow={handleSelectFlow} onViewDiagram={handleViewDiagram} />;
+  }
+
+  if (page === 'flow-diagram' && diagramFlow) {
+    return <FlowPage flow={diagramFlow} onBack={() => setPage('scenarios')} />;
   }
 
   return (
