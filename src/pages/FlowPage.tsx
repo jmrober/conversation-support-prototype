@@ -26,65 +26,60 @@ function StepPreview({ step }: { step: FlowStep }) {
   const noop = () => {};
 
   return (
-    <div
-      style={{
+    // zoom (not transform) so flex height calculations inside resolve correctly
+    <div style={{ zoom: PREVIEW_SCALE, pointerEvents: 'none' }}>
+      <div style={{
         width: PREVIEW_W,
         height: PREVIEW_H,
-        transform: `scale(${PREVIEW_SCALE})`,
-        transformOrigin: 'top left',
-        pointerEvents: 'none',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: '#fff',
-        borderRadius: 4,
-      }}
-    >
-      {/* Presence bar stub */}
-      <div style={{
-        height: 40,
-        backgroundColor: '#1a1a1a',
-        display: 'flex',
-        alignItems: 'center',
-        paddingLeft: 12,
-        paddingRight: 12,
-        gap: 8,
-        flexShrink: 0,
       }}>
+        {/* Presence bar stub */}
         <div style={{
-          width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22c55e',
-        }} />
-        <span style={{ ...mono, fontSize: 11, color: '#a3a3a3', letterSpacing: '0.04em' }}>AVAILABLE</span>
-      </div>
-
-      {/* Conversation tabs */}
-      {step.threads.length > 0 && (
-        <ConversationTabs
-          threads={step.threads}
-          selectedId={selectedId}
-          onSelect={noop}
-        />
-      )}
-
-      {/* Conversation panel */}
-      {selectedThread ? (
-        <ConversationPanel
-          thread={selectedThread}
-          composerText=""
-          muted={false}
-          onComposerChange={noop}
-          onSendMessage={noop}
-          onHoldToggle={noop}
-          onMuteToggle={noop}
-          onEndCall={noop}
-          onOpenDirectory={noop}
-          onOpenResponseAssist={noop}
-        />
-      ) : (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ ...sans, fontSize: 13, color: '#9ca3af' }}>No active conversation</span>
+          height: 40,
+          backgroundColor: '#1a1a1a',
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: 12,
+          paddingRight: 12,
+          gap: 8,
+          flexShrink: 0,
+        }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#22c55e' }} />
+          <span style={{ ...mono, fontSize: 11, color: '#a3a3a3', letterSpacing: '0.04em' }}>AVAILABLE</span>
         </div>
-      )}
+
+        {/* Conversation tabs */}
+        {step.threads.length > 0 && (
+          <ConversationTabs
+            threads={step.threads}
+            selectedId={selectedId}
+            onSelect={noop}
+          />
+        )}
+
+        {/* Conversation panel */}
+        {selectedThread ? (
+          <ConversationPanel
+            thread={selectedThread}
+            composerText=""
+            muted={false}
+            onComposerChange={noop}
+            onSendMessage={noop}
+            onHoldToggle={noop}
+            onMuteToggle={noop}
+            onEndCall={noop}
+            onOpenDirectory={noop}
+            onOpenResponseAssist={noop}
+          />
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ ...sans, fontSize: 13, color: '#9ca3af' }}>No active conversation</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
