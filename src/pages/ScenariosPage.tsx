@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { getFlows } from '../scenarios';
+import { getFlows, type ScenarioFlow } from '../scenarios';
 
 interface Props {
   onSelectFlow: (id: string) => void;
@@ -70,7 +70,7 @@ function ScenarioCard({
       }}>
         {/* Step dots */}
         <div style={{ display: 'flex', gap: 4 }}>
-          {flow.steps.map((_, i) => (
+          {flow.steps.map((_: unknown, i: number) => (
             <div
               key={i}
               style={{

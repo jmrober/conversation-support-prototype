@@ -151,7 +151,7 @@ function AudioBars() {
 
 interface CallCard {
   phone: string;
-  label: string;
+  label?: string;
   name?: string;
   holdDuration?: number; // epoch ms when hold started; if set → on-hold card
   callStartedAt?: number; // epoch ms when call started; if set → active card
