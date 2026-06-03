@@ -35,8 +35,8 @@ body.prototype-active #root { height: 100vh; }
 
 /* Hold-to-end fill — expands from left to right over 3s */
 @keyframes hold-fill {
-  0%   { height: 0%; }
-  100% { height: 100%; }
+  0%   { width: 0%; }
+  100% { width: 100%; }
 }
 .animate-hold-fill {
   animation: hold-fill 3s linear forwards;

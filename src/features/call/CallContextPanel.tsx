@@ -73,7 +73,7 @@ function HoldToEndBtn({ onConfirm }: { onConfirm?: () => void }) {
     >
       {/* Animated fill — grows left to right over 3s */}
       {holding && (
-        <div className="animate-hold-fill absolute inset-x-0 bottom-0 bg-red-700 pointer-events-none" />
+        <div className="animate-hold-fill absolute inset-y-0 left-0 bg-red-700 pointer-events-none" />
       )}
       <span className="relative flex items-center gap-1.5 text-[12px] font-semibold">
         <IconPhoneEnd />
