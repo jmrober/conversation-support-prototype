@@ -3,6 +3,7 @@ import type { Thread, PresenceStatus, PanelType, DirectoryEntry } from '../types
 import { getFlow, type ScenarioFlow } from '../scenarios';
 import { useWrapUpTimer } from '../hooks/useWrapUpTimer';
 import { SLOTS } from './registry';
+import CallContextPanel from '../features/call/CallContextPanel';
 
 interface Props {
   flowId: string | null;
@@ -293,6 +294,84 @@ function PresentationBar({ flow, stepIndex, totalSteps, onPrevStep, onNextStep, 
           </svg>
           EXIT
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Delivery Issue nav panel (step controls only) ────────────────────────────
+
+interface DeliveryPanelProps {
+  flow: ScenarioFlow;
+  stepIndex: number;
+  totalSteps: number;
+  onPrevStep: () => void;
+  onNextStep: () => void;
+  onNavigateScenarios: () => void;
+  onPresent: () => void;
+}
+
+function DeliveryIssuePanel({
+  flow, stepIndex, totalSteps,
+  onPrevStep, onNextStep, onNavigateScenarios, onPresent,
+}: DeliveryPanelProps) {
+  const mono: CSSProperties = { fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace' };
+  const sans: CSSProperties = { fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", sans-serif' };
+  const canPrev = stepIndex > 0;
+  const canNext = stepIndex < totalSteps - 1;
+  const currentStep = flow.steps[stepIndex];
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, borderLeft: '1px solid #e5e5e5', backgroundColor: '#f7f7f5' }}>
+
+      {/* Spacer — push nav to bottom */}
+      <div style={{ flex: 1 }} />
+
+      {/* Compact step nav at bottom */}
+      <div style={{ flexShrink: 0, borderTop: '1px solid #e5e5e5', backgroundColor: '#f7f7f5', padding: '12px 16px', ...mono }}>
+        {/* Step info */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 9, color: '#a3a3a3', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 3 }}>
+            Step {stepIndex + 1} of {totalSteps}
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#171717', ...sans, lineHeight: 1.3 }}>
+            {currentStep.label}
+          </div>
+          {currentStep.hint && (
+            <div style={{ fontSize: 10, color: '#737373', lineHeight: 1.5, marginTop: 5, ...sans, padding: '8px 10px', backgroundColor: '#ffffff', border: '1px solid #e5e5e5' }}>
+              {currentStep.hint}
+            </div>
+          )}
+        </div>
+
+        {/* Step dots */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 10 }}>
+          {flow.steps.map((_, i) => (
+            <div key={i} style={{
+              width: i === stepIndex ? 16 : 5, height: 5, borderRadius: 3,
+              backgroundColor: i === stepIndex ? '#171717' : i < stepIndex ? '#d4d4d4' : '#e5e5e5',
+              transition: 'all 0.2s ease', flexShrink: 0,
+            }} />
+          ))}
+        </div>
+
+        {/* Controls */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={onPrevStep} disabled={!canPrev}
+            style={{ flex: 1, fontSize: 10, fontWeight: 700, color: canPrev ? '#171717' : '#d4d4d4', background: '#fff', border: `1px solid ${canPrev ? '#d4d4d4' : '#e5e5e5'}`, padding: '5px 0', cursor: canPrev ? 'pointer' : 'default', letterSpacing: '0.06em' }}
+          >← PREV</button>
+          <button onClick={onNextStep} disabled={!canNext}
+            style={{ flex: 1, fontSize: 10, fontWeight: 700, color: canNext ? '#fff' : '#d4d4d4', background: canNext ? '#171717' : '#f5f5f5', border: `1px solid ${canNext ? '#171717' : '#e5e5e5'}`, padding: '5px 0', cursor: canNext ? 'pointer' : 'default', letterSpacing: '0.06em' }}
+          >NEXT →</button>
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+          <button onClick={onPresent}
+            style={{ flex: 1, fontSize: 9, fontWeight: 700, color: '#171717', background: '#fff', border: '1px solid #d4d4d4', padding: '4px 0', cursor: 'pointer', letterSpacing: '0.06em' }}
+          >▶ PRESENT</button>
+          <button onClick={onNavigateScenarios}
+            style={{ flex: 1, fontSize: 9, fontWeight: 600, color: '#737373', background: 'none', border: '1px solid #e5e5e5', padding: '4px 0', cursor: 'pointer', letterSpacing: '0.06em' }}
+          >← SCENARIOS</button>
+        </div>
       </div>
     </div>
   );
@@ -772,6 +851,80 @@ export default function Prototype({ flowId, onNavigateScenarios }: Props) {
   }, [activePanel, presentationMode, customerCall, consultCall, totalSteps]);
 
   // ── Render ────────────────────────────────────────────────────────────────
+
+  // Delivery Issue scenarios: CallContextPanel only — no existing rail
+  if (flow?.id === 'delivery-issue-call' || flow?.id === 'delivery-issue-call-confirm') {
+    const endMode = flow.id === 'delivery-issue-call-confirm' ? 'click-confirm' : 'hold';
+    const holdThread = threads.find(t => t.status === 'on-hold') ?? null;
+    const activeThread = threads.find(t => t.status === 'active') ?? null;
+    const ivrSource = threads.find(t => t.chatbotSummary) ?? null;
+
+    const holdCard = holdThread ? {
+      phone: holdThread.participantPhone ?? holdThread.participantName,
+      label: holdThread.queue ?? holdThread.participantName,
+      holdDuration: holdThread.callStartedAt,
+      transcriptionInProgress: true,
+    } : undefined;
+
+    const activeCard = activeThread ? {
+      phone: activeThread.participantPhone ?? activeThread.participantName,
+      name: activeThread.participantName,
+      callStartedAt: activeThread.callStartedAt,
+      transcriptionInProgress: true,
+    } : undefined;
+
+    const panel = (
+      <div style={{ width: 360, height: '100%', flexShrink: 0, overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.10)', borderRadius: 4 }}>
+        <CallContextPanel
+          agentStatus="Ready"
+          holdCard={holdCard}
+          activeCard={activeCard}
+          muted={muted}
+          ivrSummary={ivrSource?.chatbotSummary?.summary}
+          ivrDataPoints={ivrSource?.chatbotSummary?.dataPoints?.map(dp => ({
+            label: dp.label,
+            value: dp.value,
+            copyable: dp.label === 'Order number' || dp.label === 'Task ID',
+          }))}
+          onResume={holdThread ? () => updateThread(holdThread.id, { status: 'active' }) : undefined}
+          onMerge={() => {}}
+          onEndHeld={holdThread ? () => updateThread(holdThread.id, { status: 'ended' }) : undefined}
+          onMute={() => { if (activeThread) updateThread(activeThread.id, { muted: !activeThread.muted }); }}
+          onHold={activeThread ? () => updateThread(activeThread.id, { status: 'on-hold' }) : undefined}
+          endMode={endMode}
+        />
+      </div>
+    );
+
+    if (presentationMode) {
+      return (
+        <div style={{ position: 'relative', display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#e5e5e3', paddingTop: 20, paddingBottom: 100, boxSizing: 'border-box' }}>
+          {panel}
+          <PresentationBar
+            flow={flow} stepIndex={stepIndex} totalSteps={totalSteps}
+            onPrevStep={() => setStepIndex(i => Math.max(0, i - 1))}
+            onNextStep={() => setStepIndex(i => Math.min(totalSteps - 1, i + 1))}
+            onExit={() => setPresentationMode(false)}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex h-screen bg-gray-200 items-stretch">
+        {panel}
+        <DeliveryIssuePanel
+          flow={flow}
+          stepIndex={stepIndex}
+          totalSteps={totalSteps}
+          onPrevStep={() => setStepIndex(i => Math.max(0, i - 1))}
+          onNextStep={() => setStepIndex(i => Math.min(totalSteps - 1, i + 1))}
+          onNavigateScenarios={onNavigateScenarios}
+          onPresent={() => setPresentationMode(true)}
+        />
+      </div>
+    );
+  }
 
   // Presentation mode: centered rail on neutral bg, floating bar
   if (presentationMode) {

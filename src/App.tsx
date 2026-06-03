@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import ScenariosPage from './pages/ScenariosPage';
 import FlowPage from './pages/FlowPage';
 import Prototype from './prototype/Prototype';
+import PatternLibrary from './pages/PatternLibrary';
 import { getFlow, type ScenarioFlow } from './scenarios';
 
-type AppPage = 'scenarios' | 'prototype' | 'flow-diagram';
+type AppPage = 'scenarios' | 'prototype' | 'flow-diagram' | 'patterns';
 
 export default function App() {
   const [page, setPage] = useState<AppPage>('scenarios');
@@ -30,6 +31,10 @@ export default function App() {
 
   if (page === 'scenarios') {
     return <ScenariosPage onSelectFlow={handleSelectFlow} onViewDiagram={handleViewDiagram} />;
+  }
+
+  if (page === 'patterns') {
+    return <PatternLibrary onNavigate={(p) => setPage(p as AppPage)} />;
   }
 
   if (page === 'flow-diagram' && diagramFlow) {

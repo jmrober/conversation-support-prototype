@@ -12,6 +12,7 @@ import ResponseAssistPanel from '../features/conversation/ResponseAssistPanel';
 import WrapUpTimer from '../features/call/WrapUpTimer';
 import InboundCallAlert from '../features/call/InboundCallAlert';
 import DirectoryPanel from '../features/directory/DirectoryPanel';
+import CallContextPanel from '../features/call/CallContextPanel';
 
 type AppPage = 'scenarios' | 'patterns' | 'prototype';
 
@@ -281,6 +282,46 @@ function HoldTransitionDemo() {
         </div>
       </div>
       <p className="text-xs text-gray-400" style={mono}>Click Hold to toggle — 500ms crossfade</p>
+    </div>
+  );
+}
+
+const NOW_PANEL = Date.now();
+function CallContextPanelDemo() {
+  const [muted, setMuted] = useState(false);
+  return (
+    <div className="w-[320px] h-[600px] border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <CallContextPanel
+        agentStatus="Ready"
+        muted={muted}
+        holdCard={{
+          phone: '+1 (555) 346-5780',
+          label: 'Services - Appliances',
+          holdDuration: NOW_PANEL - 3000,
+          transcriptionInProgress: true,
+        }}
+        activeCard={{
+          phone: '+1 (555) 346-5780',
+          name: 'Liam Hawthorne',
+          callStartedAt: NOW_PANEL - 41000,
+          transcriptionInProgress: true,
+        }}
+        ivrSummary={'A client is reaching out for assistance regarding their Deluxe Gaming Chair. They opted for express shipping, but the order status has shown "Out for Delivery" for more than a day. The client requires the chair urgently for a crucial gaming tournament happening tomorrow. They have double-checked their shipping details and confirmed that no delivery attempts have been made.'}
+        ivrDataPoints={[
+          { label: 'Intent', value: 'Delivery Issue' },
+          { label: 'Reason', value: 'Package delayed' },
+          { label: 'Order number', value: '#ORD-23405', copyable: true },
+          { label: 'Task ID', value: 'W18487D-28c23948575657', copyable: true },
+          { label: 'Category', value: 'Delivery Issue' },
+          { label: 'Manufacturer Warranty', value: 'Yes - 1 Year' },
+          { label: 'Serial number', value: 'SN-GC-2024-88421' },
+        ]}
+        onResume={() => {}}
+        onMerge={() => {}}
+        onEndHeld={() => {}}
+        onMute={() => setMuted(m => !m)}
+        onHold={() => {}}
+      />
     </div>
   );
 }
@@ -615,6 +656,7 @@ const PATTERNS: PatternDef[] = [
   { id: 'thread-idle-internal', title: 'Thread Items — Idle & Internal', group: 'Thread List', detail: 'Idle customer + internal colleague', description: 'Idle customer thread (no urgency) and an internal colleague chat. Internal threads use a slate accent and show role/department.', demo: <ThreadIdleDemo /> },
   { id: 'call-active', title: 'Active Call Card', group: 'Call Controls', detail: 'Live timer · mute toggle', description: 'Full call card on dark slate background with live elapsed timer. Click Mute to toggle microphone state with visual feedback.', demo: <CallActiveDemo /> },
   { id: 'call-hold', title: 'Hold State Transition', group: 'Call Controls', detail: '500ms background crossfade', description: 'Toggling hold transitions the call card from dark slate to warm amber — an unmistakable visual signal that the customer is waiting.', demo: <HoldTransitionDemo /> },
+  { id: 'call-context-panel', title: 'Call Context Panel', group: 'Call Controls', detail: 'On-hold + active + IVR metadata', description: 'Two-card layout showing an on-hold call with Resume / Merge / End actions and an active call with live timer, audio bars, Mute and Hold controls. Below the cards: IVR summary and structured metadata fields.', demo: <CallContextPanelDemo /> },
   { id: 'call-consult', title: 'Consult & Warm Transfer', group: 'Call Controls', detail: 'Two-leg call · confirm transfer', description: 'During a consult the agent sees both call legs: customer on hold (amber) and the internal consult (slate). Warm transfer button moves the customer to the colleague.', demo: <ConsultTransferDemo /> },
   { id: 'inbound-alert', title: 'Inbound Call Alert', group: 'Alerts & Overlays', detail: '30s auto-reject · pulsing ring', description: 'Full-screen overlay with pulsing ring animation. 30-second countdown auto-rejects if not answered. Accept and Decline buttons are always accessible.', demo: <InboundAlertDemoWrapper /> },
   { id: 'wrapup-timer-full', title: 'Wrap-Up Form', group: 'Alerts & Overlays', detail: 'Live countdown · required disposition', description: 'Post-call wrap-up modal with live timer, AI-generated summary, required disposition picker, and optional notes. Blocks new contacts until complete or skipped.', demo: <WrapUpTimerDemoWrapper /> },
